@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eye Tracking - Simple CDN Example</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    
+    #gazeCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    .controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 100;
+    }
+    
+    .controls button {
+      display: block;
+      margin: 5px 0;
+      padding: 5px 10px;
+      width: 150px;
+    }
+    
+    .status {
+      margin-top: 10px;
+      padding: 5px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gazeCanvas"></canvas>
+  
+  <div class="controls">
+    <button id="connectBtn">Connect</button>
+    <button id="calibrateBtn">Calibrate</button>
+    <button id="trackBtn">Start Tracking</button>
+    <div class="status" id="status">Disconnected</div>
+  </div>
+
+  <!-- Load from CDN (replace with actual CDN URL when published) -->
+  <script src="../dist/index.umd.js"></script>
+  
+  <script>
+    // Access via global object
+    const { createEyeTracker, CanvasRenderer, DeviceStatus } = window.IrisPointEyeTracking || window.CogixEyeTracking
+    
+    // Set canvas to full window size
+    const canvas = document.getElementById('gazeCanvas')
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+    
+    // Create tracker and renderer
+    const tracker = createEyeTracker({ debug: false })
+    const renderer = new CanvasRenderer({
+      canvas: canvas,
+      gazeRadius: 15,
+      gazeColor: 'rgba(255, 100, 100, 0.8)',
+      trailLength: 50,
+      trailColor: 'rgba(255, 100, 100, 0.2)'
+    })
+    
+    // UI elements
+    const connectBtn = document.getElementById('connectBtn')
+    const calibrateBtn = document.getElementById('calibrateBtn')
+    const trackBtn = document.getElementById('trackBtn')
+    const statusDiv = document.getElementById('status')
+    
+    // Update status display
+    tracker.on('statusChanged', (status) => {
+      statusDiv.textContent = status.charAt(0).toUpperCase() + status.slice(1)
+      
+      // Update button states
+      if (status === DeviceStatus.CONNECTED) {
+        calibrateBtn.disabled = false
+        trackBtn.disabled = false
+      }
+    })
+    
+    // Visualize gaze data
+    tracker.on('gazeData', (data) => {
+      // Convert normalized coordinates to screen pixels
+      const screenData = {
+        ...data,
+        x: data.x,
+        y: data.y
+      }
+      renderer.drawGazePoint(screenData)
+    })
+    
+    // Calibration events
+    tracker.on('calibrationProgress', ({ current, total }) => {
+      statusDiv.textContent = `Calibrating: ${current}/${total}`
+      renderer.showCalibrationPoint(current - 1)
+    })
+    
+    tracker.on('calibrationComplete', () => {
+      statusDiv.textContent = 'Calibration Complete!'
+      renderer.hideCalibrationPoints()
+      setTimeout(() => {
+        tracker.startTracking()
+      }, 1000)
+    })
+    
+    // Button handlers
+    connectBtn.onclick = async () => {
+      try {
+        connectBtn.disabled = true
+        statusDiv.textContent = 'Connecting...'
+        await tracker.connect()
+        connectBtn.textContent = 'Disconnect'
+        connectBtn.disabled = false
+        connectBtn.onclick = () => {
+          tracker.disconnect()
+          connectBtn.textContent = 'Connect'
+          connectBtn.onclick = arguments.callee
+        }
+      } catch (error) {
+        statusDiv.textContent = 'Connection Failed'
+        connectBtn.disabled = false
+      }
+    }
+    
+    calibrateBtn.onclick = () => {
+      tracker.startCalibration(5)
+      renderer.config.showCalibrationPoints = true
+    }
+    
+    trackBtn.onclick = () => {
+      if (trackBtn.textContent === 'Start Tracking') {
+        tracker.startTracking()
+        trackBtn.textContent = 'Stop Tracking'
+      } else {
+        tracker.stopTracking()
+        trackBtn.textContent = 'Start Tracking'
+      }
+    }
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+      renderer.setSize(window.innerWidth, window.innerHeight)
+    })
+    
+    // Cleanup
+    window.addEventListener('beforeunload', () => {
+      tracker.dispose()
+    })
+  </script>
+</body>
+</html>

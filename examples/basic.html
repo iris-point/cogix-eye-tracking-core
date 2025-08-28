@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eye Tracking Core - Basic Example</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .controls button {
+      margin: 5px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .controls button:hover {
+      background: #0056b3;
+    }
+    
+    .controls button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 4px;
+      margin-left: 10px;
+      font-weight: bold;
+    }
+    
+    .status.disconnected { background: #dc3545; color: white; }
+    .status.connecting { background: #ffc107; color: black; }
+    .status.connected { background: #28a745; color: white; }
+    .status.calibrating { background: #17a2b8; color: white; }
+    .status.tracking { background: #007bff; color: white; }
+    .status.error { background: #dc3545; color: white; }
+    
+    .canvas-container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    
+    #gazeCanvas {
+      border: 1px solid #ddd;
+      background: white;
+    }
+    
+    .info {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+    
+    .data-display {
+      font-family: monospace;
+      background: #263238;
+      color: #aed581;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      min-height: 100px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Eye Tracking Core - Basic Example</h1>
+    
+    <div class="controls">
+      <h3>Connection</h3>
+      <button id="connectBtn">Connect</button>
+      <button id="disconnectBtn" disabled>Disconnect</button>
+      <span class="status" id="status">disconnected</span>
+      
+      <h3>Calibration</h3>
+      <button id="calibrateBtn" disabled>Start Calibration</button>
+      <button id="cancelCalibrationBtn" disabled>Cancel Calibration</button>
+      
+      <h3>Tracking</h3>
+      <button id="startTrackingBtn" disabled>Start Tracking</button>
+      <button id="stopTrackingBtn" disabled>Stop Tracking</button>
+      <button id="clearDataBtn">Clear Data</button>
+      
+      <h3>Visualization</h3>
+      <button id="showTrailBtn">Show Trail</button>
+      <button id="showHeatmapBtn">Show Heatmap</button>
+      <button id="downloadBtn">Download Image</button>
+    </div>
+    
+    <div class="canvas-container">
+      <canvas id="gazeCanvas" width="800" height="600"></canvas>
+    </div>
+    
+    <div class="info">
+      <h3>Live Data</h3>
+      <div class="data-display" id="dataDisplay">
+        Waiting for connection...
+      </div>
+    </div>
+  </div>
+
+  <!-- Load the library -->
+  <script type="module">
+    import { createEyeTracker, CanvasRenderer, DeviceStatus } from '../src/index.ts'
+    
+    // For production, use:
+    // import { createEyeTracker, CanvasRenderer, DeviceStatus } from '@iris-point/eye-tracking-core'
+    // Or with CDN:
+    // const { createEyeTracker, CanvasRenderer, DeviceStatus } = IrisPointEyeTracking
+    
+    // Initialize
+    const tracker = createEyeTracker({
+      debug: true,
+      bufferSize: 5000,
+      reconnectAttempts: 3
+    })
+    
+    const canvas = document.getElementById('gazeCanvas')
+    const renderer = new CanvasRenderer({
+      canvas: canvas,
+      gazeRadius: 12,
+      gazeColor: 'rgba(255, 0, 0, 0.8)',
+      trailLength: 30,
+      trailColor: 'rgba(255, 0, 0, 0.3)',
+      calibrationPointRadius: 25,
+      calibrationPointColor: 'rgba(0, 255, 0, 0.8)'
+    })
+    
+    // UI Elements
+    const statusEl = document.getElementById('status')
+    const dataDisplay = document.getElementById('dataDisplay')
+    const connectBtn = document.getElementById('connectBtn')
+    const disconnectBtn = document.getElementById('disconnectBtn')
+    const calibrateBtn = document.getElementById('calibrateBtn')
+    const cancelCalibrationBtn = document.getElementById('cancelCalibrationBtn')
+    const startTrackingBtn = document.getElementById('startTrackingBtn')
+    const stopTrackingBtn = document.getElementById('stopTrackingBtn')
+    const clearDataBtn = document.getElementById('clearDataBtn')
+    const showTrailBtn = document.getElementById('showTrailBtn')
+    const showHeatmapBtn = document.getElementById('showHeatmapBtn')
+    const downloadBtn = document.getElementById('downloadBtn')
+    
+    // State
+    let isShowingTrail = true
+    let dataCount = 0
+    
+    // Update UI based on status
+    function updateUI(status) {
+      statusEl.textContent = status
+      statusEl.className = 'status ' + status
+      
+      // Update button states
+      connectBtn.disabled = status !== DeviceStatus.DISCONNECTED
+      disconnectBtn.disabled = status === DeviceStatus.DISCONNECTED
+      calibrateBtn.disabled = status !== DeviceStatus.CONNECTED
+      cancelCalibrationBtn.disabled = status !== DeviceStatus.CALIBRATING
+      startTrackingBtn.disabled = status !== DeviceStatus.CONNECTED && status !== DeviceStatus.CALIBRATING
+      stopTrackingBtn.disabled = status !== DeviceStatus.TRACKING
+    }
+    
+    // Event Listeners
+    tracker.on('statusChanged', (status) => {
+      console.log('Status changed:', status)
+      updateUI(status)
+    })
+    
+    tracker.on('connected', () => {
+      console.log('Connected to eye tracker')
+      dataDisplay.textContent = 'Connected! Ready for calibration or tracking.'
+    })
+    
+    tracker.on('disconnected', () => {
+      console.log('Disconnected from eye tracker')
+      dataDisplay.textContent = 'Disconnected from eye tracker.'
+    })
+    
+    tracker.on('error', (error) => {
+      console.error('Error:', error)
+      dataDisplay.textContent = `Error: ${error.message}`
+    })
+    
+    tracker.on('gazeData', (data) => {
+      dataCount++
+      
+      // Update display every 10 samples to avoid too frequent updates
+      if (dataCount % 10 === 0) {
+        const info = [
+          `Position: (${data.x.toFixed(3)}, ${data.y.toFixed(3)})`,
+          `Confidence: ${(data.confidence || 0).toFixed(2)}`,
+          `Timestamp: ${new Date(data.timestamp).toLocaleTimeString()}`,
+          `Sample #${dataCount}`,
+          `Buffer: ${tracker.getRecentData(100).length} samples`
+        ].join(' | ')
+        
+        dataDisplay.textContent = info
+      }
+      
+      // Draw gaze point
+      if (isShowingTrail) {
+        renderer.drawGazePoint(data)
+      }
+    })
+    
+    tracker.on('calibrationStarted', ({ points }) => {
+      console.log(`Calibration started with ${points} points`)
+      dataDisplay.textContent = `Calibration started. Follow the ${points} points on screen.`
+      renderer.showCalibrationPoint(0)
+    })
+    
+    tracker.on('calibrationProgress', ({ current, total }) => {
+      console.log(`Calibration progress: ${current}/${total}`)
+      dataDisplay.textContent = `Calibration progress: ${current}/${total} points completed`
+      
+      if (current < total) {
+        renderer.showCalibrationPoint(current)
+      }
+    })
+    
+    tracker.on('calibrationComplete', (result) => {
+      console.log('Calibration complete:', result)
+      dataDisplay.textContent = `Calibration ${result.success ? 'successful' : 'failed'}!`
+      renderer.hideCalibrationPoints()
+    })
+    
+    tracker.on('calibrationCancelled', () => {
+      console.log('Calibration cancelled')
+      dataDisplay.textContent = 'Calibration cancelled'
+      renderer.hideCalibrationPoints()
+    })
+    
+    tracker.on('cameraFrame', ({ imageData, timestamp }) => {
+      // Could display camera feed if needed
+      // For now, just log that we're receiving frames
+      if (dataCount % 100 === 0) {
+        console.log('Receiving camera frames')
+      }
+    })
+    
+    // Button Handlers
+    connectBtn.addEventListener('click', async () => {
+      try {
+        dataDisplay.textContent = 'Connecting...'
+        await tracker.connect()
+      } catch (error) {
+        console.error('Connection failed:', error)
+        dataDisplay.textContent = `Connection failed: ${error.message}`
+      }
+    })
+    
+    disconnectBtn.addEventListener('click', () => {
+      tracker.disconnect()
+      renderer.reset()
+    })
+    
+    calibrateBtn.addEventListener('click', () => {
+      try {
+        tracker.startCalibration(5)
+        renderer.config.showCalibrationPoints = true
+      } catch (error) {
+        console.error('Failed to start calibration:', error)
+        dataDisplay.textContent = `Failed to start calibration: ${error.message}`
+      }
+    })
+    
+    cancelCalibrationBtn.addEventListener('click', () => {
+      tracker.cancelCalibration()
+      renderer.hideCalibrationPoints()
+    })
+    
+    startTrackingBtn.addEventListener('click', () => {
+      try {
+        tracker.startTracking()
+        dataDisplay.textContent = 'Tracking started'
+      } catch (error) {
+        console.error('Failed to start tracking:', error)
+        dataDisplay.textContent = `Failed to start tracking: ${error.message}`
+      }
+    })
+    
+    stopTrackingBtn.addEventListener('click', () => {
+      tracker.stopTracking()
+      dataDisplay.textContent = 'Tracking stopped'
+    })
+    
+    clearDataBtn.addEventListener('click', () => {
+      tracker.clearData()
+      renderer.reset()
+      dataCount = 0
+      dataDisplay.textContent = 'Data cleared'
+    })
+    
+    showTrailBtn.addEventListener('click', () => {
+      isShowingTrail = !isShowingTrail
+      showTrailBtn.textContent = isShowingTrail ? 'Hide Trail' : 'Show Trail'
+      if (!isShowingTrail) {
+        renderer.reset()
+      }
+    })
+    
+    showHeatmapBtn.addEventListener('click', () => {
+      const recentData = tracker.getRecentData(500)
+      if (recentData.length > 0) {
+        renderer.drawHeatmap(recentData, 40)
+        dataDisplay.textContent = `Heatmap drawn with ${recentData.length} points`
+      } else {
+        dataDisplay.textContent = 'No data available for heatmap'
+      }
+    })
+    
+    downloadBtn.addEventListener('click', () => {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+      renderer.download(`gaze-visualization-${timestamp}.png`)
+    })
+    
+    // Initial UI state
+    updateUI(DeviceStatus.DISCONNECTED)
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      tracker.dispose()
+    })
+  </script>
+</body>
+</html>
