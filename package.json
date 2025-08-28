@@ -54,13 +54,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/cogix/eye-tracking-core"
+    "url": "https://github.com/iris-point/cogix-eye-tracking-core"
   },
   "publishConfig": {
     "access": "public"
   },
   "bugs": {
-    "url": "https://github.com/cogix/eye-tracking-core/issues"
+    "url": "https://github.com/iris-point/cogix-eye-tracking-core/issues"
   },
-  "homepage": "https://github.com/cogix/eye-tracking-core#readme"
+  "homepage": "https://github.com/iris-point/cogix-eye-tracking-core#readme"
 }
+  
