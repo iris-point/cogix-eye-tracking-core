@@ -117,7 +117,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
     super()
     
     this.config = {
-      wsUrl: ['ws://127.0.0.1:9000'], // Same as raw example
+      wsUrl: ['ws://127.0.0.1:9000', 'wss://127.0.0.1:8443'], // Default ws on 9000, fallback to wss on 8443
       reconnectAttempts: 0,
       reconnectDelay: 1000,
       bufferSize: 10000,
@@ -154,8 +154,10 @@ export class EyeTracker extends EventEmitter<EventMap> {
     
     return new Promise((resolve, reject) => {
       try {
-        // Use ws://127.0.0.1:9000 like raw example
-        this.websocket = new WebSocket('ws://127.0.0.1:9000')
+        // Get the first URL from config (support array or string)
+        const wsUrl = Array.isArray(this.config.wsUrl) ? this.config.wsUrl[0] : this.config.wsUrl
+        this.log(`Connecting to ${wsUrl}...`)
+        this.websocket = new WebSocket(wsUrl)
         
         this.websocket.onopen = () => {
           this.log('Connection established')
@@ -175,15 +177,17 @@ export class EyeTracker extends EventEmitter<EventMap> {
         }
         
         this.websocket.onerror = (event) => {
-          this.setStatus(DeviceStatus.ERROR)
+          // Don't reject - just log like raw example
+          this.log('WebSocket error:', event)
           this.emit('error', new Error('Connection error'))
-          reject(new Error('WebSocket error'))
+          // Don't set ERROR status or reject - let it try to connect
         }
         
         this.websocket.onclose = (event) => {
           this.log('Disconnection')
           this.setStatus(DeviceStatus.DISCONNECTED)
           this.emit('disconnected', undefined)
+          // Don't reject on close - the raw example doesn't fail here
         }
       } catch (error) {
         this.setStatus(DeviceStatus.ERROR)

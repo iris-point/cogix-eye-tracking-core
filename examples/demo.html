@@ -316,7 +316,7 @@
         
         // Create tracker instance
         const tracker = new EyeTracker({
-            wsUrl: 'ws://127.0.0.1:9000',
+            wsUrl: 'ws://127.0.0.1:9000',  // Use ws:// on port 9000 (or 'wss://127.0.0.1:8443' for secure)
             autoInitialize: false,  // Don't auto-init, let's do it manually like raw example
             initDelay: 500,        // 500ms delay between device init and light init
             debug: true   // Enable debug to see what's happening
