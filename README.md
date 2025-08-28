@@ -17,8 +17,17 @@ Minimal, lightweight eye tracking library for HH WebSocket-based hardware eye tr
 
 ## Installation
 
-### NPM
+### From NPM Registry (Recommended)
 ```bash
+npm install @iris-point/eye-tracking-core
+```
+
+### From GitHub Packages
+```bash
+# First, create a .npmrc file in your project root with:
+echo "@iris-point:registry=https://npm.pkg.github.com" >> .npmrc
+
+# Then install
 npm install @iris-point/eye-tracking-core
 ```
 
