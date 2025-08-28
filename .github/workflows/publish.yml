@@ -21,8 +21,9 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     
-    # Only run on main repository, not on forks
-    if: github.repository == 'iris-point/eye-tracking-core'
+    # Remove repository restriction to allow running on any repo
+    # Uncomment the line below if you want to restrict to a specific repo
+    # if: github.repository == 'YOUR_GITHUB_USERNAME/YOUR_REPO_NAME'
     
     steps:
       - name: Checkout code
@@ -48,11 +49,18 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
-          # Check if there are any changes in src/ or important files
-          if git diff HEAD~1 --name-only | grep -E "^(src/|package.json|README.md)" > /dev/null 2>&1; then
+          # For first commit or manual trigger, always proceed
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          elif ! git rev-parse HEAD~1 >/dev/null 2>&1; then
+            # First commit in repository
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          elif git diff HEAD~1 --name-only | grep -E "^(src/|package.json|README.md|examples/)" > /dev/null 2>&1; then
+            # Check if there are any changes in src/, examples/, or important files
             echo "has_changes=true" >> $GITHUB_OUTPUT
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No relevant changes detected, skipping publish"
           fi
 
       - name: Determine version bump

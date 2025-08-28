@@ -1,0 +1,55 @@
+name: Test Publish (Dry Run)
+
+on:
+  push:
+    branches:
+      - '**'  # Run on all branches
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  test-publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Test npm pack (dry run)
+        run: |
+          npm pack --dry-run
+          echo "✅ Package can be built successfully"
+
+      - name: Check package size
+        run: |
+          SIZE=$(npm pack --dry-run 2>&1 | grep "npm notice" | grep "package size" | awk '{print $4, $5}')
+          echo "📦 Package size: $SIZE"
+          
+      - name: List package contents
+        run: |
+          echo "📋 Package will include:"
+          npm pack --dry-run 2>&1 | grep "npm notice" | grep -E "^\npm notice [0-9]+" | sed 's/npm notice //'
+
+      - name: Validate version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "📌 Current version: $VERSION"
+          
+          # Check if version follows semver
+          if echo "$VERSION" | grep -E "^[0-9]+\.[0-9]+\.[0-9]+$" > /dev/null; then
+            echo "✅ Version follows semantic versioning"
+          else
+            echo "❌ Version does not follow semantic versioning"
+            exit 1
+          fi
