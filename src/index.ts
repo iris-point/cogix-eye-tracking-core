@@ -7,6 +7,7 @@
 import { EyeTracker } from './EyeTracker'
 import { CalibrationUI } from './CalibrationUI'
 import { CanvasRenderer } from './CanvasRenderer'
+import { CameraOverlay } from './CameraOverlay'
 import { DataBuffer } from './DataBuffer'
 import { EventEmitter } from './EventEmitter'
 import { DeviceStatus, CoreConfig } from './types'
@@ -15,6 +16,7 @@ import { DeviceStatus, CoreConfig } from './types'
 export { EyeTracker }
 export { CalibrationUI }
 export { CanvasRenderer }
+export { CameraOverlay, type CameraOverlayConfig } from './CameraOverlay'
 export { DataBuffer }
 export { EventEmitter }
 export { DeviceStatus }
@@ -27,7 +29,10 @@ export type {
   DeviceInfo,
   CoreConfig,
   EventCallback,
-  EventMap
+  EventMap,
+  TrackerOutput,
+  EyeInfo,
+  SightLine
 } from './types'
 
 // Factory function
@@ -44,6 +49,7 @@ if (typeof window !== 'undefined') {
     EyeTracker,
     CalibrationUI,
     CanvasRenderer,
+    CameraOverlay,
     DataBuffer,
     EventEmitter,
     createEyeTracker,

@@ -12,8 +12,80 @@ import {
   DeviceStatus,
   DeviceInfo,
   CoreConfig,
-  EventMap
+  EventMap,
+  TrackerOutput
 } from './types'
+
+/**
+ * WebSocket command constants
+ * All commands are pre-defined to avoid dynamic construction
+ */
+const COMMANDS = {
+  // Device initialization
+  INIT_ET10C: {
+    "req_cmd": "init_et10c",
+    "eyeType": 0,
+    "resType": "640x368x30",
+    "numpoint": 5,
+    "sceenTypeIndex": 1  // Note: typo preserved from HH
+  },
+  
+  // IR Light control
+  SET_BRIGHT_80: {
+    "req_cmd": "setBright",
+    "irBrights": 80
+  },
+  
+  // Camera control
+  START_CAMERA: {
+    "req_cmd": "startCamera"
+  },
+  
+  STOP_CAMERA: {
+    "req_cmd": "stopCamera"
+  },
+  
+  FLIP_CAMERA: {
+    "req_cmd": "filpCamera"  // Note: typo preserved from HH
+  },
+  
+  // Calibration control
+  STOP_CALIBRATION: {
+    "req_cmd": "stopCalibration"
+  },
+  
+  CHECK_CALIBRATION: {
+    "req_cmd": "checkCabliration"  // Note: typo preserved from HH
+  },
+  
+  RESTART_CALIBRATION: {
+    "req_cmd": "restartCalibration"
+  },
+  
+  // Tracking control
+  START_TRACKER: {
+    "req_cmd": "startTracker"
+  },
+  
+  STOP_TRACKER: {
+    "req_cmd": "stopTracker"
+  },
+  
+  // Utility
+  GET_CURR_TIMESTAMP: {
+    "req_cmd": "getCurrTimeStamp"
+  }
+} as const
+
+/**
+ * Factory function for calibration point commands
+ * These need to be dynamic due to varying x,y coordinates
+ */
+const createCalibrationCommand = (x: number, y: number) => ({
+  "req_cmd": "startCalibration",
+  "point_x": x,
+  "point_y": y
+})
 
 export class EyeTracker extends EventEmitter<EventMap> {
   private websocket: WebSocket | null = null
@@ -22,6 +94,8 @@ export class EyeTracker extends EventEmitter<EventMap> {
   private dataBuffer: DataBuffer
   private isCalibrating: boolean = false
   private calibrationStep: number = 0
+  private cameraEnabled: boolean = false
+  private cameraFlipped: boolean = false
   
   // Calibration points - same as raw example
   private calibrationPoints = [
@@ -118,37 +192,24 @@ export class EyeTracker extends EventEmitter<EventMap> {
       (element as any).msRequestFullscreen()
     }
 
-    // Send init command - exact same as raw example
-    const init_et10c = {
-      "req_cmd": "init_et10c",
-      "eyeType": 0,
-      "resType": "640x368x30",
-      "numpoint": 5,
-      "sceenTypeIndex": 1  // Note: typo preserved from HH
-    }
-    
-    this.sendCommand(init_et10c)
+    // Send init command using constant
+    this.sendCommand(COMMANDS.INIT_ET10C)
   }
 
   /**
    * Initialize IR light - matches raw example initLight()
    */
   initLight(): void {
-    const set_Bright80 = {
-      "req_cmd": "setBright",
-      "irBrights": 80
-    }
-    this.sendCommand(set_Bright80)
+    this.sendCommand(COMMANDS.SET_BRIGHT_80)
   }
 
   /**
    * Initialize camera - matches raw example initCamera()
    */
   initCamera(): void {
-    const start_camera = {
-      "req_cmd": "startCamera"
-    }
-    this.sendCommand(start_camera)
+    this.sendCommand(COMMANDS.START_CAMERA)
+    this.cameraEnabled = true
+    this.emit('cameraStarted', undefined)
   }
 
   /**
@@ -169,12 +230,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
     const firstPoint = this.calibrationPoints[0]
     
     setTimeout(() => {
-      const startCalibration0 = {
-        "req_cmd": "startCalibration",
-        "point_x": firstPoint.x,
-        "point_y": firstPoint.y
-      }
-      this.sendCommand(startCalibration0)
+      this.sendCommand(createCalibrationCommand(firstPoint.x, firstPoint.y))
     }, 3000)
   }
 
@@ -201,10 +257,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
 
         if (jsonIris.nFinishedNum === 5) {
           // Check calibration - matches raw example line 328-329
-          const checkCalibration = {
-            "req_cmd": "checkCabliration"  // Note: typo preserved from HH
-          }
-          this.sendCommand(checkCalibration)
+          this.sendCommand(COMMANDS.CHECK_CALIBRATION)
         }
       }
 
@@ -227,7 +280,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
 
       // Handle tracking data - matches raw example line 342-379
       if (jsonIris.trakcerOutput) {
-        const trakcerOutputData = jsonIris.trakcerOutput
+        const trakcerOutputData: TrackerOutput = this.parseTrackerOutput(jsonIris.trakcerOutput)
         
         let alleyeLeft = 0
         let alleyeRight = 0
@@ -256,7 +309,22 @@ export class EyeTracker extends EventEmitter<EventMap> {
             timestamp: Date.now(),
             x: alleyeLeft,
             y: alleyeRight,
-            confidence: 0.9
+            confidence: 0.9,
+            rawTrackerOutput: trakcerOutputData
+          }
+
+          if (trakcerOutputData.tLeftScreenPoint) {
+            gazeData.leftEye = {
+              x: trakcerOutputData.tLeftScreenPoint.f32X,
+              y: trakcerOutputData.tLeftScreenPoint.f32Y
+            }
+          }
+
+          if (trakcerOutputData.tRightScreenPoint) {
+            gazeData.rightEye = {
+              x: trakcerOutputData.tRightScreenPoint.f32X,
+              y: trakcerOutputData.tRightScreenPoint.f32Y
+            }
           }
 
           this.dataBuffer.add(gazeData)
@@ -272,6 +340,11 @@ export class EyeTracker extends EventEmitter<EventMap> {
         })
       }
 
+      // Handle timestamp response
+      if (jsonIris.currTimeStamp !== undefined) {
+        this.emit('timestampReceived', { timestamp: jsonIris.currTimeStamp })
+      }
+
       // Handle status code - matches raw example line 389-392
       if (jsonIris.statusCode === "5001") {
         this.setStatus(DeviceStatus.DISCONNECTED)
@@ -280,6 +353,30 @@ export class EyeTracker extends EventEmitter<EventMap> {
 
     } catch (error) {
       this.log('Error processing message:', error)
+    }
+  }
+
+  /**
+   * Parse tracker output data to match C++ structure
+   */
+  private parseTrackerOutput(data: any): TrackerOutput {
+    // If already parsed, return as-is
+    if (data.haveLeftEyeInfo !== undefined) {
+      return data
+    }
+
+    // Parse from raw format if needed
+    return {
+      haveLeftEyeInfo: data.haveLeftEyeInfo || false,
+      haveLeftScreenPoint: data.haveLeftScreenPoint || false,
+      haveRightEyeInfo: data.haveRightEyeInfo || false,
+      haveRightScreenPoint: data.haveRightScreenPoint || false,
+      tLeftEyeInfo: data.tLeftEyeInfo,
+      tRightEyeInfo: data.tRightEyeInfo,
+      tLeftScreenPoint: data.tLeftScreenPoint,
+      tRightScreenPoint: data.tRightScreenPoint,
+      tLeftSightLine: data.tLeftSightLine,
+      tRightSightLine: data.tRightSightLine
     }
   }
 
@@ -297,11 +394,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
         // Send second point - matches raw example line 514-519
         setTimeout(() => {
           const point = this.calibrationPoints[1]
-          this.sendCommand({
-            "req_cmd": "startCalibration",
-            "point_x": point.x,
-            "point_y": point.y
-          })
+          this.sendCommand(createCalibrationCommand(point.x, point.y))
         }, 3000)
         break
       
@@ -309,11 +402,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
         // Send third point - matches raw example line 525-528
         setTimeout(() => {
           const point = this.calibrationPoints[2]
-          this.sendCommand({
-            "req_cmd": "startCalibration",
-            "point_x": point.x,
-            "point_y": point.y
-          })
+          this.sendCommand(createCalibrationCommand(point.x, point.y))
         }, 3000)
         break
       
@@ -321,11 +410,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
         // Send fourth point - matches raw example line 531-535
         setTimeout(() => {
           const point = this.calibrationPoints[3]
-          this.sendCommand({
-            "req_cmd": "startCalibration",
-            "point_x": point.x,
-            "point_y": point.y
-          })
+          this.sendCommand(createCalibrationCommand(point.x, point.y))
         }, 3000)
         break
       
@@ -333,11 +418,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
         // Send fifth point - matches raw example line 538-542
         setTimeout(() => {
           const point = this.calibrationPoints[4]
-          this.sendCommand({
-            "req_cmd": "startCalibration",
-            "point_x": point.x,
-            "point_y": point.y
-          })
+          this.sendCommand(createCalibrationCommand(point.x, point.y))
         }, 3000)
         break
     }
@@ -347,10 +428,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
    * Start tracking - matches raw example starteyeTracer()
    */
   startTracking(): void {
-    const startTracker = {
-      "req_cmd": "startTracker"
-    }
-    this.sendCommand(startTracker)
+    this.sendCommand(COMMANDS.START_TRACKER)
     this.setStatus(DeviceStatus.TRACKING)
   }
 
@@ -358,10 +436,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
    * Stop tracking
    */
   stopTracking(): void {
-    const stopTracker = {
-      "req_cmd": "stopTracker"
-    }
-    this.sendCommand(stopTracker)
+    this.sendCommand(COMMANDS.STOP_TRACKER)
     this.setStatus(DeviceStatus.CONNECTED)
   }
 
@@ -369,10 +444,46 @@ export class EyeTracker extends EventEmitter<EventMap> {
    * End camera - matches raw example endCamera()
    */
   endCamera(): void {
-    const stop_camera = {
-      "req_cmd": "stopCamera"
-    }
-    this.sendCommand(stop_camera)
+    this.sendCommand(COMMANDS.STOP_CAMERA)
+    this.cameraEnabled = false
+    this.emit('cameraStopped', undefined)
+  }
+
+  /**
+   * Flip camera image
+   */
+  flipCamera(): void {
+    this.sendCommand(COMMANDS.FLIP_CAMERA)
+    this.cameraFlipped = !this.cameraFlipped
+    this.emit('cameraFlipped', undefined)
+  }
+
+  /**
+   * Get current timestamp from device
+   */
+  getCurrTimeStamp(): void {
+    this.sendCommand(COMMANDS.GET_CURR_TIMESTAMP)
+  }
+
+  /**
+   * Stop calibration
+   */
+  stopCalibration(): void {
+    this.sendCommand(COMMANDS.STOP_CALIBRATION)
+    this.isCalibrating = false
+    this.emit('calibrationCancelled', undefined)
+    this.setStatus(DeviceStatus.CONNECTED)
+  }
+
+  /**
+   * Restart calibration
+   */
+  restartCalibration(): void {
+    this.sendCommand(COMMANDS.RESTART_CALIBRATION)
+    this.isCalibrating = true
+    this.calibrationStep = 0
+    this.emit('calibrationRestarted', undefined)
+    this.setStatus(DeviceStatus.CALIBRATING)
   }
 
   /**
@@ -414,6 +525,14 @@ export class EyeTracker extends EventEmitter<EventMap> {
 
   getStatus(): DeviceStatus {
     return this.status
+  }
+
+  isCameraEnabled(): boolean {
+    return this.cameraEnabled
+  }
+
+  isCameraFlipped(): boolean {
+    return this.cameraFlipped
   }
 
   getData(): GazeData[] {
