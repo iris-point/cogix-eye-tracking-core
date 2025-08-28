@@ -317,9 +317,9 @@
         // Create tracker instance
         const tracker = new EyeTracker({
             wsUrl: 'ws://127.0.0.1:9000',
-            autoInitialize: true,  // Auto-init device and light after connection
+            autoInitialize: false,  // Don't auto-init, let's do it manually like raw example
             initDelay: 500,        // 500ms delay between device init and light init
-            debug: false
+            debug: true   // Enable debug to see what's happening
         });
 
         // Create UI components
@@ -444,19 +444,27 @@
         
         tracker.on('connected', () => {
             console.log('Connected to eye tracker');
-            // Device and light are auto-initialized by default
-            // Wait for 'ready' event to enable camera
+            // Manually initialize like the raw example
+            setTimeout(() => {
+                console.log('Initializing device...');
+                tracker.initDevice();
+                setTimeout(() => {
+                    console.log('Initializing light...');
+                    tracker.initLight();
+                    setTimeout(() => {
+                        console.log('Initializing camera...');
+                        tracker.initCamera();
+                        cameraOverlay.init();
+                        cameraOverlay.show();
+                        cameraToggle.checked = true;
+                    }, 500);
+                }, 500);
+            }, 100);
         });
         
         tracker.on('ready', (data) => {
             console.log('Device ready:', data);
             // Device is now initialized and ready for calibration
-            // Auto-enable camera after device is ready
-            console.log('Starting camera...');
-            tracker.initCamera();
-            cameraOverlay.init();
-            cameraOverlay.show();
-            cameraToggle.checked = true;  // Update UI toggle
         });
         
         // Listen for camera frames to debug
