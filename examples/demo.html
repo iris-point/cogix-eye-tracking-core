@@ -174,16 +174,16 @@
             background: transparent;
         }
 
-        /* Calibration canvas */
+        /* Calibration canvas - fullscreen overlay */
         #calibrationCanvas {
-            position: absolute;
+            position: fixed;  /* Fixed to viewport, not relative to container */
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 100vw;  /* Full viewport width */
+            height: 100vh;  /* Full viewport height */
             background: rgba(0, 0, 0, 0.95);
             display: none;
-            z-index: 100;
+            z-index: 1000;  /* High z-index to cover everything */
         }
 
         /* Data panel */
@@ -276,9 +276,6 @@
         <!-- Tracking visualization canvas -->
         <canvas id="trackingCanvas"></canvas>
         
-        <!-- Calibration canvas (hidden) -->
-        <canvas id="calibrationCanvas"></canvas>
-        
         <!-- Data display panel -->
         <div class="data-panel" id="dataPanel" style="display: none;">
             <div class="data-row">
@@ -305,6 +302,9 @@
             <p id="messageText">Click Connect to begin</p>
         </div>
     </div>
+
+    <!-- Calibration canvas (fullscreen overlay, outside main container) -->
+    <canvas id="calibrationCanvas"></canvas>
 
     <!-- Include the SDK -->
     <script src="../dist/cogix-eye-tracking-core.js"></script>
@@ -350,7 +350,8 @@
             size: 'small',
             opacity: 0.9,
             showControls: false,
-            autoHide: false
+            autoHide: false,
+            zIndex: 2000  // Higher than calibration canvas (1000)
         });
 
         // Get UI elements
@@ -407,6 +408,7 @@
                     stopBtn.disabled = true;
                     disconnectBtn.disabled = false;
                     cameraToggle.disabled = false;
+                    cameraToggle.checked = true;  // Show camera is on
                     hideMessage();
                     break;
                     
@@ -443,7 +445,11 @@
         tracker.on('connected', () => {
             console.log('Connected to eye tracker');
             // Device and light are auto-initialized by default
-            // No need to manually call initDevice() and initLight()
+            // Auto-enable camera after connection
+            tracker.initCamera();
+            cameraOverlay.init();
+            cameraOverlay.show();
+            cameraToggle.checked = true;  // Update UI toggle
         });
         
         tracker.on('ready', (data) => {
@@ -501,12 +507,8 @@
         });
         
         calibrateBtn.addEventListener('click', () => {
-            // Optionally show camera during calibration
-            if (!tracker.isCameraEnabled() && cameraToggle.checked) {
-                tracker.initCamera();
-                cameraOverlay.init();
-                cameraOverlay.show();
-            }
+            // Camera should already be on from connection
+            // Just start calibration
             tracker.startCalibration();
         });
         
@@ -559,10 +561,13 @@
             const width = main.offsetWidth;
             const height = main.offsetHeight;
             
+            // Tracking canvas uses container size
             document.getElementById('trackingCanvas').width = width;
             document.getElementById('trackingCanvas').height = height;
-            document.getElementById('calibrationCanvas').width = width;
-            document.getElementById('calibrationCanvas').height = height;
+            
+            // Calibration canvas uses full viewport
+            document.getElementById('calibrationCanvas').width = window.innerWidth;
+            document.getElementById('calibrationCanvas').height = window.innerHeight;
         }
         
         window.addEventListener('resize', resizeCanvases);
