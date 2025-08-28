@@ -35,8 +35,8 @@ export function createEyeTracker(config?: CoreConfig): EyeTracker {
   return new EyeTracker(config)
 }
 
-// Version
-export const VERSION = '1.0.0'
+// Version from package.json
+export const VERSION = '0.0.1' // This is updated automatically during build
 
 // Browser global for CDN usage
 if (typeof window !== 'undefined') {
