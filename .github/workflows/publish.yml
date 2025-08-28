@@ -1,11 +1,8 @@
-name: Publish to NPM
+name: Publish to npm
 
 on:
-  # Trigger on version tags
   push:
-    tags:
-      - 'v*.*.*'
-  # Manual trigger for any version
+    tags: [ 'v*.*.*' ]
   workflow_dispatch:
     inputs:
       version:
@@ -21,36 +18,35 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: write       # for pushing tags and creating releases
+      id-token: write       # for npm provenance
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           registry-url: 'https://registry.npmjs.org'
+          scope: '@iris-point'
+          cache: 'npm'
+          always-auth: true
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build package
-        run: npm run build
+      - run: npm ci
+      - run: npm run build
 
       # For tag-triggered releases
-      - name: Publish to NPM (Tag Release)
+      - name: Publish to npm (Tag Release)
         if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          npm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
-          npm publish --access public
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # For manual workflow dispatch
-      - name: Configure Git
+      - name: Configure Git (Manual)
         if: github.event_name == 'workflow_dispatch'
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -63,11 +59,9 @@ jobs:
           npm version ${{ github.event.inputs.version }} -m "chore(release): %s"
           echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
-      - name: Publish to NPM (Manual)
+      - name: Publish to npm (Manual)
         if: github.event_name == 'workflow_dispatch'
-        run: |
-          npm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
-          npm publish --access public
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
