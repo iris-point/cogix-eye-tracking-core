@@ -37,9 +37,9 @@ export class CalibrationUI {
       pointSize: config?.pointSize ?? 20,
       pointColor: config?.pointColor ?? '#4CAF50',
       backgroundColor: config?.backgroundColor ?? 'rgba(0, 0, 0, 0.95)',
-      showInstructions: config?.showInstructions ?? true,
+      showInstructions: config?.showInstructions ?? false,  // Default to no instructions for cleaner UI
       instructionText: config?.instructionText ?? 'Follow the green dot with your eyes',
-      autoFullscreen: config?.autoFullscreen ?? false
+      autoFullscreen: config?.autoFullscreen ?? true  // Default to fullscreen like raw example
     }
 
     // Default 5-point calibration pattern
@@ -96,10 +96,10 @@ export class CalibrationUI {
 
     this.tracker.on('calibrationProgress', (data) => {
       // data.current is 1-based from the device, we need 0-based for array indexing
+      // The tracker will handle sending the next calibration point after delay
+      // We just need to update the visual display immediately
       this.currentPointIndex = data.current - 1
-      if (this.currentPointIndex >= 0 && this.currentPointIndex < this.calibrationPoints.length) {
-        this.showPoint(this.currentPointIndex)
-      }
+      // Note: showPoint is not needed here as the animation loop will draw the current point
     })
 
     this.tracker.on('calibrationComplete', () => {
@@ -146,16 +146,7 @@ export class CalibrationUI {
     }
 
     this.currentPointIndex = index
-    
-    // Clear any existing timer
-    if (this.pointTimer) {
-      clearTimeout(this.pointTimer)
-    }
-
-    // Auto-advance after duration
-    this.pointTimer = setTimeout(() => {
-      // Tracker will handle advancing to next point
-    }, this.config.pointDuration)
+    // No timer needed - the tracker handles the timing
   }
 
   /**
@@ -176,9 +167,9 @@ export class CalibrationUI {
       this.drawCalibrationPoint(point)
     }
 
-    // Draw instructions
+    // Draw minimal instructions if enabled
     if (this.config.showInstructions) {
-      this.drawInstructions()
+      this.drawMinimalInstructions()
     }
 
     // Continue animation
@@ -228,25 +219,26 @@ export class CalibrationUI {
   }
 
   /**
-   * Draw instructions
+   * Draw minimal instructions (just progress)
    */
-  private drawInstructions(): void {
+  private drawMinimalInstructions(): void {
     if (!this.ctx || !this.canvas) return
 
-    const text = this.config.instructionText
-    const progress = `Point ${this.currentPointIndex + 1} of ${this.calibrationPoints.length}`
+    const progress = `${this.currentPointIndex + 1} / ${this.calibrationPoints.length}`
 
-    // Draw instruction text
-    this.ctx.fillStyle = 'white'
-    this.ctx.font = '24px Arial'
+    // Draw minimal progress indicator at bottom
+    this.ctx.font = '14px Arial'
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
     this.ctx.textAlign = 'center'
-    this.ctx.textBaseline = 'top'
-    this.ctx.fillText(text, this.canvas.width / 2, 50)
+    this.ctx.textBaseline = 'bottom'
+    this.ctx.fillText(progress, this.canvas.width / 2, this.canvas.height - 20)
+  }
 
-    // Draw progress
-    this.ctx.font = '18px Arial'
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
-    this.ctx.fillText(progress, this.canvas.width / 2, 90)
+  /**
+   * Draw instructions (legacy method for compatibility)
+   */
+  private drawInstructions(): void {
+    this.drawMinimalInstructions()
   }
 
   /**

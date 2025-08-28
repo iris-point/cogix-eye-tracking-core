@@ -325,10 +325,12 @@
         // Create UI components
         const calibrationUI = new CalibrationUI(tracker, {
             canvas: document.getElementById('calibrationCanvas'),
-            pointDuration: 3000,
+            pointDuration: 3000,  // Matches the tracker's 3s delay
             pointSize: 20,
             pointColor: '#4CAF50',
-            backgroundColor: 'rgba(0, 0, 0, 0.95)'
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+            showInstructions: false,  // Minimal UI like raw example
+            autoFullscreen: true  // Auto fullscreen for calibration
         });
 
         const canvasRenderer = new CanvasRenderer(tracker, {
@@ -414,8 +416,9 @@
                     trackBtn.disabled = true;
                     stopBtn.disabled = false;
                     disconnectBtn.disabled = true;
-                    cameraToggle.disabled = true;
+                    cameraToggle.disabled = false;  // Allow camera toggle during calibration
                     document.getElementById('calibrationCanvas').style.display = 'block';
+                    hideMessage();  // Hide any message during calibration
                     break;
                     
                 case DeviceStatus.TRACKING:
@@ -471,6 +474,12 @@
         tracker.on('calibrationComplete', (result) => {
             console.log('Calibration complete:', result);
             document.getElementById('calibrationCanvas').style.display = 'none';
+            // Exit fullscreen after calibration if it was entered
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(err => {
+                    console.warn('Failed to exit fullscreen:', err);
+                });
+            }
             // Auto-start tracking after calibration
             tracker.startTracking();
         });
@@ -492,6 +501,12 @@
         });
         
         calibrateBtn.addEventListener('click', () => {
+            // Optionally show camera during calibration
+            if (!tracker.isCameraEnabled() && cameraToggle.checked) {
+                tracker.initCamera();
+                cameraOverlay.init();
+                cameraOverlay.show();
+            }
             tracker.startCalibration();
         });
         
