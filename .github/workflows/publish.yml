@@ -43,7 +43,9 @@ jobs:
       # For tag-triggered releases
       - name: Publish to NPM (Tag Release)
         if: startsWith(github.ref, 'refs/tags/v')
-        run: npm publish --access public
+        run: |
+          npm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -63,7 +65,9 @@ jobs:
 
       - name: Publish to NPM (Manual)
         if: github.event_name == 'workflow_dispatch'
-        run: npm publish --access public
+        run: |
+          npm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
