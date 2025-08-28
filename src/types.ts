@@ -106,6 +106,8 @@ export interface CoreConfig {
   reconnectDelay?: number        // Delay between reconnects in ms
   bufferSize?: number           // Size of internal data buffer
   autoConnect?: boolean         // Auto-connect on initialization
+  autoInitialize?: boolean      // Auto-initialize device and light after connection
+  initDelay?: number            // Delay between init device and init light (ms)
   debug?: boolean              // Enable debug logging
 }
 

@@ -30,11 +30,7 @@ const COMMANDS = {
     "sceenTypeIndex": 1  // Note: typo preserved from HH
   },
   
-  // IR Light control
-  SET_BRIGHT_80: {
-    "req_cmd": "setBright",
-    "irBrights": 80
-  },
+  // IR Light control - removed, will be dynamic
   
   // Camera control
   START_CAMERA: {
@@ -87,6 +83,15 @@ const createCalibrationCommand = (x: number, y: number) => ({
   "point_y": y
 })
 
+/**
+ * Factory function for IR brightness command
+ * Brightness can be set from 0 to 100
+ */
+const createBrightnessCommand = (brightness: number) => ({
+  "req_cmd": "setBright",
+  "irBrights": Math.max(0, Math.min(100, brightness))
+})
+
 export class EyeTracker extends EventEmitter<EventMap> {
   private websocket: WebSocket | null = null
   private status: DeviceStatus = DeviceStatus.DISCONNECTED
@@ -96,6 +101,8 @@ export class EyeTracker extends EventEmitter<EventMap> {
   private calibrationStep: number = 0
   private cameraEnabled: boolean = false
   private cameraFlipped: boolean = false
+  private autoInitialize: boolean = true
+  private isInitialized: boolean = false
   
   // Calibration points - same as raw example
   private calibrationPoints = [
@@ -115,6 +122,8 @@ export class EyeTracker extends EventEmitter<EventMap> {
       reconnectDelay: 1000,
       bufferSize: 10000,
       autoConnect: false,
+      autoInitialize: true,  // Auto-initialize device after connection
+      initDelay: 500,        // Delay between init device and init light
       debug: false,
       ...config
     }
@@ -123,6 +132,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
       this.config.wsUrl = [this.config.wsUrl]
     }
 
+    this.autoInitialize = this.config.autoInitialize ?? true
     this.dataBuffer = new DataBuffer(this.config.bufferSize)
   }
 
@@ -151,6 +161,12 @@ export class EyeTracker extends EventEmitter<EventMap> {
           this.log('Connection established')
           this.setStatus(DeviceStatus.CONNECTED)
           this.emit('connected', undefined)
+          
+          // Auto-initialize device if enabled
+          if (this.autoInitialize && !this.isInitialized) {
+            this.autoInit()
+          }
+          
           resolve()
         }
         
@@ -177,30 +193,75 @@ export class EyeTracker extends EventEmitter<EventMap> {
   }
 
   /**
-   * Initialize device - matches raw example initDevice()
+   * Auto-initialize device and light after connection
+   * This matches the typical initialization sequence
    */
-  initDevice(): void {
+  private async autoInit(): Promise<void> {
+    this.log('Auto-initializing device...')
+    
+    // Step 1: Initialize device
+    this.initDevice()
+    
+    // Step 2: Wait for configured delay (default 500ms)
+    await new Promise(resolve => setTimeout(resolve, this.config.initDelay))
+    
+    // Step 3: Initialize IR light with default brightness (80)
+    this.initLight()
+    
+    this.isInitialized = true
+    this.log('Device initialization complete')
+    this.emit('ready', { initialized: true })
+  }
+
+  /**
+   * Initialize device - matches raw example initDevice()
+   * @param requestFullscreen - Whether to request fullscreen (default: true)
+   */
+  initDevice(requestFullscreen: boolean = true): void {
     // Request fullscreen like raw example
-    const element = document.documentElement
-    if (element.requestFullscreen) {
-      element.requestFullscreen()
-    } else if ((element as any).mozRequestFullScreen) {
-      (element as any).mozRequestFullScreen()
-    } else if ((element as any).webkitRequestFullscreen) {
-      (element as any).webkitRequestFullscreen()
-    } else if ((element as any).msRequestFullscreen) {
-      (element as any).msRequestFullscreen()
+    if (requestFullscreen) {
+      const element = document.documentElement
+      if (element.requestFullscreen) {
+        element.requestFullscreen()
+      } else if ((element as any).mozRequestFullScreen) {
+        (element as any).mozRequestFullScreen()
+      } else if ((element as any).webkitRequestFullscreen) {
+        (element as any).webkitRequestFullscreen()
+      } else if ((element as any).msRequestFullscreen) {
+        (element as any).msRequestFullscreen()
+      }
     }
 
     // Send init command using constant
     this.sendCommand(COMMANDS.INIT_ET10C)
+    
+    // Mark as initialized if called manually
+    if (!this.autoInitialize) {
+      this.isInitialized = true
+    }
   }
 
   /**
    * Initialize IR light - matches raw example initLight()
+   * @param brightness - Optional brightness level (0-100), defaults to 80
    */
-  initLight(): void {
-    this.sendCommand(COMMANDS.SET_BRIGHT_80)
+  initLight(brightness: number = 80): void {
+    this.sendCommand(createBrightnessCommand(brightness))
+  }
+
+  /**
+   * Set IR light brightness
+   * @param brightness - Brightness level (0-100)
+   */
+  setBrightness(brightness: number): void {
+    this.sendCommand(createBrightnessCommand(brightness))
+  }
+
+  /**
+   * Turn off IR light (set brightness to 0)
+   */
+  closeLight(): void {
+    this.sendCommand(createBrightnessCommand(0))
   }
 
   /**
@@ -248,7 +309,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
         this.log('Finish checked!', jsonIris.nFinishedNum)
         
         this.emit('calibrationProgress', {
-          current: jsonIris.nFinishedNum,
+          current: jsonIris.nFinishedNum,  // This is already 1-based from the device
           total: 5
         })
 
@@ -382,16 +443,14 @@ export class EyeTracker extends EventEmitter<EventMap> {
 
   /**
    * Send next calibration point - matches raw example eyeCalibration()
+   * finishedNum is 1-based (from device), matching the raw example
    */
   private sendNextCalibrationPoint(finishedNum: number): void {
     // Move to next point and send command
+    // finishedNum is 1-based: 1 means first point finished, send second point
     switch (finishedNum) {
-      case 0:
-        // First point already sent, wait for completion
-        break
-      
       case 1:
-        // Send second point - matches raw example line 514-519
+        // First point finished, send second point - matches raw example line 514-519
         setTimeout(() => {
           const point = this.calibrationPoints[1]
           this.sendCommand(createCalibrationCommand(point.x, point.y))
@@ -399,7 +458,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
         break
       
       case 2:
-        // Send third point - matches raw example line 525-528
+        // Second point finished, send third point - matches raw example line 525-528
         setTimeout(() => {
           const point = this.calibrationPoints[2]
           this.sendCommand(createCalibrationCommand(point.x, point.y))
@@ -407,7 +466,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
         break
       
       case 3:
-        // Send fourth point - matches raw example line 531-535
+        // Third point finished, send fourth point - matches raw example line 531-535
         setTimeout(() => {
           const point = this.calibrationPoints[3]
           this.sendCommand(createCalibrationCommand(point.x, point.y))
@@ -415,11 +474,16 @@ export class EyeTracker extends EventEmitter<EventMap> {
         break
       
       case 4:
-        // Send fifth point - matches raw example line 538-542
+        // Fourth point finished, send fifth point - matches raw example line 538-542
         setTimeout(() => {
           const point = this.calibrationPoints[4]
           this.sendCommand(createCalibrationCommand(point.x, point.y))
         }, 3000)
+        break
+      
+      case 5:
+        // Fifth point finished, calibration complete
+        // checkCalibration command is sent in handleMessage
         break
     }
   }
@@ -512,12 +576,30 @@ export class EyeTracker extends EventEmitter<EventMap> {
    * Disconnect
    */
   disconnect(): void {
-    if (this.websocket) {
+    // Turn off camera and light before disconnecting
+    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+      if (this.cameraEnabled) {
+        this.endCamera()
+      }
+      // Turn off IR light
+      this.closeLight()
+      
+      // Give commands time to send before closing connection
+      setTimeout(() => {
+        if (this.websocket) {
+          this.websocket.close()
+          this.websocket = null
+        }
+      }, 100)
+    } else if (this.websocket) {
       this.websocket.close()
       this.websocket = null
     }
     
     this.isCalibrating = false
+    this.cameraEnabled = false
+    this.cameraFlipped = false
+    this.isInitialized = false
     this.setStatus(DeviceStatus.DISCONNECTED)
   }
 

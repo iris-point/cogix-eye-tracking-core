@@ -317,6 +317,8 @@
         // Create tracker instance
         const tracker = new EyeTracker({
             wsUrl: 'ws://127.0.0.1:9000',
+            autoInitialize: true,  // Auto-init device and light after connection
+            initDelay: 500,        // 500ms delay between device init and light init
             debug: false
         });
 
@@ -437,11 +439,13 @@
         
         tracker.on('connected', () => {
             console.log('Connected to eye tracker');
-            // Auto-initialize after connection
-            setTimeout(() => {
-                tracker.initDevice();
-                tracker.initLight();
-            }, 500);
+            // Device and light are auto-initialized by default
+            // No need to manually call initDevice() and initLight()
+        });
+        
+        tracker.on('ready', (data) => {
+            console.log('Device ready:', data);
+            // Device is now initialized and ready for calibration
         });
         
         tracker.on('gazeData', (data) => {
