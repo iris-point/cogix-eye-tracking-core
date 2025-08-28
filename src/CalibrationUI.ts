@@ -1,12 +1,15 @@
 /**
- * Fullscreen Calibration UI Manager
- * Creates a fullscreen overlay for calibration that's always on top
+ * Calibration UI Manager
+ * Handles calibration visualization and user interaction
  */
 
-import { CalibrationPoint } from './types'
+import { EyeTracker } from './EyeTracker'
+import { CalibrationPoint, DeviceStatus } from './types'
 
 export interface CalibrationUIConfig {
-  pointRadius?: number
+  canvas?: HTMLCanvasElement | string
+  pointDuration?: number
+  pointSize?: number
   pointColor?: string
   backgroundColor?: string
   showInstructions?: boolean
@@ -15,9 +18,7 @@ export interface CalibrationUIConfig {
 }
 
 export class CalibrationUI {
-  private static globalInstance: CalibrationUI | null = null
-  
-  private overlay: HTMLDivElement | null = null
+  private tracker: EyeTracker
   private canvas: HTMLCanvasElement | null = null
   private ctx: CanvasRenderingContext2D | null = null
   private config: Required<CalibrationUIConfig>
@@ -25,16 +26,20 @@ export class CalibrationUI {
   private currentPointIndex: number = -1
   private isVisible: boolean = false
   private animationFrame: number | null = null
+  private pointTimer: NodeJS.Timeout | null = null
 
-  constructor(config?: CalibrationUIConfig) {
+  constructor(tracker: EyeTracker, config?: CalibrationUIConfig) {
+    this.tracker = tracker
+    
     this.config = {
-      pointRadius: 20,
-      pointColor: 'rgba(0, 255, 0, 0.8)',
-      backgroundColor: 'rgba(0, 0, 0, 0.9)',
-      showInstructions: true,
-      instructionText: 'Follow the green dot with your eyes',
-      autoFullscreen: true,
-      ...config
+      canvas: (config?.canvas || null) as any,
+      pointDuration: config?.pointDuration ?? 3000,
+      pointSize: config?.pointSize ?? 20,
+      pointColor: config?.pointColor ?? '#4CAF50',
+      backgroundColor: config?.backgroundColor ?? 'rgba(0, 0, 0, 0.95)',
+      showInstructions: config?.showInstructions ?? true,
+      instructionText: config?.instructionText ?? 'Follow the green dot with your eyes',
+      autoFullscreen: config?.autoFullscreen ?? false
     }
 
     // Default 5-point calibration pattern
@@ -45,205 +50,164 @@ export class CalibrationUI {
       { x: 0.1, y: 0.9, samples: [], error: 0 },  // Bottom-left
       { x: 0.9, y: 0.9, samples: [], error: 0 }   // Bottom-right
     ]
-  }
 
-  /**
-   * Show calibration UI in fullscreen
-   */
-  show(): void {
-    if (this.isVisible) return
-
-    // Request fullscreen if enabled
-    if (this.config.autoFullscreen) {
-      this.requestFullscreen()
+    // Initialize canvas if provided
+    if (this.config.canvas) {
+      this.setCanvas(this.config.canvas)
     }
 
-    // Create overlay
-    this.createOverlay()
-    this.isVisible = true
-    
-    // Ensure overlay stays on top even in complex frameworks
-    this.ensureOnTop()
+    // Setup event listeners
+    this.setupEventListeners()
   }
-  
+
   /**
-   * Force the calibration UI to the top of the DOM
-   * This handles cases where frameworks might add elements after our overlay
+   * Set or change the canvas element
    */
-  private ensureOnTop(): void {
-    if (!this.overlay) return
-    
-    // Use a small delay to ensure it happens after any framework rendering
-    setTimeout(() => {
-      if (this.overlay && document.body) {
-        // Move to end of body
-        document.body.appendChild(this.overlay)
-        
-        // Force highest z-index again in case it was overridden
-        this.overlay.style.zIndex = '2147483647'
-        
-        // Also check and fix every 100ms during calibration
-        const checkInterval = setInterval(() => {
-          if (this.overlay && this.isVisible) {
-            if (this.overlay.parentNode !== document.body || 
-                this.overlay !== document.body.lastElementChild) {
-              document.body.appendChild(this.overlay)
-            }
-          } else {
-            clearInterval(checkInterval)
-          }
-        }, 100)
+  setCanvas(canvas: HTMLCanvasElement | string): void {
+    // Resolve canvas element
+    if (typeof canvas === 'string') {
+      const element = document.querySelector(canvas) as HTMLCanvasElement
+      if (!element) {
+        console.warn(`Canvas element ${canvas} not found`)
+        return
       }
-    }, 0)
+      this.canvas = element
+    } else {
+      this.canvas = canvas
+    }
+
+    // Get context
+    const ctx = this.canvas.getContext('2d')
+    if (!ctx) {
+      console.warn('Failed to get 2D context from canvas')
+      return
+    }
+    this.ctx = ctx
   }
 
   /**
-   * Hide calibration UI
+   * Setup event listeners
    */
-  hide(): void {
-    if (!this.isVisible) return
+  private setupEventListeners(): void {
+    // Listen for calibration events
+    this.tracker.on('calibrationStarted', (data) => {
+      this.start()
+    })
 
-    if (this.animationFrame) {
-      cancelAnimationFrame(this.animationFrame)
-      this.animationFrame = null
+    this.tracker.on('calibrationProgress', (data) => {
+      this.currentPointIndex = data.current - 1 // Adjust for 0-based index
+      if (this.currentPointIndex >= 0 && this.currentPointIndex < this.calibrationPoints.length) {
+        this.showPoint(this.currentPointIndex)
+      }
+    })
+
+    this.tracker.on('calibrationComplete', () => {
+      this.hide()
+    })
+
+    this.tracker.on('calibrationCancelled', () => {
+      this.hide()
+    })
+  }
+
+  /**
+   * Start calibration UI
+   */
+  start(): void {
+    if (!this.canvas) {
+      console.warn('No canvas set for calibration UI')
+      return
     }
 
-    if (this.overlay && this.overlay.parentNode) {
-      document.body.removeChild(this.overlay)
+    this.isVisible = true
+    this.currentPointIndex = -1
+    
+    // Enter fullscreen if configured
+    if (this.config.autoFullscreen && document.fullscreenElement === null) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.warn('Failed to enter fullscreen:', err)
+      })
     }
 
-    this.overlay = null
-    this.canvas = null
-    this.ctx = null
-    this.isVisible = false
-
-    // Exit fullscreen if in fullscreen
-    if (document.fullscreenElement) {
-      document.exitFullscreen()
-    }
+    // Show canvas
+    this.canvas.style.display = 'block'
+    
+    // Start animation
+    this.animate()
   }
 
   /**
    * Show specific calibration point
    */
   showPoint(index: number): void {
-    if (!this.isVisible) {
-      this.show()
+    if (index < 0 || index >= this.calibrationPoints.length) {
+      return
     }
 
     this.currentPointIndex = index
-    this.drawCalibration()
+    
+    // Clear any existing timer
+    if (this.pointTimer) {
+      clearTimeout(this.pointTimer)
+    }
+
+    // Auto-advance after duration
+    this.pointTimer = setTimeout(() => {
+      // Tracker will handle advancing to next point
+    }, this.config.pointDuration)
   }
 
   /**
-   * Create fullscreen overlay
+   * Animation loop
    */
-  private createOverlay(): void {
-    // Create overlay div with maximum z-index to ensure it's always on top
-    this.overlay = document.createElement('div')
-    this.overlay.id = 'iris-point-calibration-overlay'
-    this.overlay.style.cssText = `
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      bottom: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      background: ${this.config.backgroundColor} !important;
-      z-index: 2147483647 !important;  /* Maximum z-index value */
-      pointer-events: all !important;   /* Block all interactions below */
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      overflow: hidden !important;
-      transform: none !important;
-      opacity: 1 !important;
-    `
-
-    // Create canvas
-    this.canvas = document.createElement('canvas')
-    this.canvas.width = window.innerWidth
-    this.canvas.height = window.innerHeight
-    this.canvas.style.cssText = `
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      z-index: 2147483647 !important;
-      pointer-events: none !important;
-    `
-
-    this.ctx = this.canvas.getContext('2d')
-    if (!this.ctx) {
-      throw new Error('Failed to get 2D context')
+  private animate(): void {
+    if (!this.isVisible || !this.ctx || !this.canvas) {
+      return
     }
 
-    // Add instructions if enabled
+    // Clear canvas
+    this.ctx.fillStyle = this.config.backgroundColor
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+
+    // Draw current calibration point
+    if (this.currentPointIndex >= 0 && this.currentPointIndex < this.calibrationPoints.length) {
+      const point = this.calibrationPoints[this.currentPointIndex]
+      this.drawCalibrationPoint(point)
+    }
+
+    // Draw instructions
     if (this.config.showInstructions) {
-      const instructions = document.createElement('div')
-      instructions.style.cssText = `
-        position: absolute !important;
-        top: 20px !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        color: white !important;
-        font-family: Arial, sans-serif !important;
-        font-size: 24px !important;
-        text-align: center !important;
-        z-index: 2147483647 !important;
-        pointer-events: none !important;
-      `
-      instructions.textContent = this.config.instructionText
-      this.overlay.appendChild(instructions)
+      this.drawInstructions()
     }
 
-    this.overlay.appendChild(this.canvas)
-    
-    // Force append to body and ensure it's the last element
-    // This guarantees it appears on top of everything
-    document.body.appendChild(this.overlay)
-    
-    // Double-check by moving it to the end if needed
-    document.body.appendChild(this.overlay)
-
-    // Handle window resize
-    window.addEventListener('resize', this.handleResize.bind(this))
+    // Continue animation
+    this.animationFrame = requestAnimationFrame(() => this.animate())
   }
 
   /**
    * Draw calibration point with animation
    */
-  private drawCalibration(): void {
-    if (!this.ctx || !this.canvas || this.currentPointIndex < 0) return
-
-    // Clear canvas
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
-
-    const point = this.calibrationPoints[this.currentPointIndex]
-    if (!point) return
+  private drawCalibrationPoint(point: CalibrationPoint): void {
+    if (!this.ctx || !this.canvas) return
 
     const x = point.x * this.canvas.width
     const y = point.y * this.canvas.height
-
-    // Animate the point (pulsing effect)
+    
+    // Animated pulsing effect
     const time = Date.now() / 1000
     const pulse = Math.sin(time * 3) * 0.2 + 0.8
-    const radius = this.config.pointRadius * pulse
+    const size = this.config.pointSize * pulse
 
     // Draw outer ring
     this.ctx.beginPath()
-    this.ctx.arc(x, y, radius + 10, 0, Math.PI * 2)
+    this.ctx.arc(x, y, size + 10, 0, Math.PI * 2)
     this.ctx.strokeStyle = this.config.pointColor
     this.ctx.lineWidth = 2
     this.ctx.stroke()
 
     // Draw main point
     this.ctx.beginPath()
-    this.ctx.arc(x, y, radius, 0, Math.PI * 2)
+    this.ctx.arc(x, y, size, 0, Math.PI * 2)
     this.ctx.fillStyle = this.config.pointColor
     this.ctx.fill()
 
@@ -253,104 +217,104 @@ export class CalibrationUI {
     this.ctx.fillStyle = 'white'
     this.ctx.fill()
 
-    // Draw point number
+    // Draw progress indicator
+    const progress = (this.currentPointIndex + 1) / this.calibrationPoints.length
+    this.ctx.beginPath()
+    this.ctx.arc(x, y, size + 20, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * progress), false)
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
+    this.ctx.lineWidth = 3
+    this.ctx.stroke()
+  }
+
+  /**
+   * Draw instructions
+   */
+  private drawInstructions(): void {
+    if (!this.ctx || !this.canvas) return
+
+    const text = this.config.instructionText
+    const progress = `Point ${this.currentPointIndex + 1} of ${this.calibrationPoints.length}`
+
+    // Draw instruction text
     this.ctx.fillStyle = 'white'
-    this.ctx.font = 'bold 16px Arial'
+    this.ctx.font = '24px Arial'
     this.ctx.textAlign = 'center'
-    this.ctx.textBaseline = 'middle'
-    this.ctx.fillText((this.currentPointIndex + 1).toString(), x, y)
+    this.ctx.textBaseline = 'top'
+    this.ctx.fillText(text, this.canvas.width / 2, 50)
 
-    // Continue animation
-    this.animationFrame = requestAnimationFrame(() => this.drawCalibration())
+    // Draw progress
+    this.ctx.font = '18px Arial'
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
+    this.ctx.fillText(progress, this.canvas.width / 2, 90)
   }
 
   /**
-   * Handle window resize
+   * Hide calibration UI
    */
-  private handleResize(): void {
-    if (this.canvas) {
-      this.canvas.width = window.innerWidth
-      this.canvas.height = window.innerHeight
-      this.drawCalibration()
-    }
-  }
-
-  /**
-   * Request fullscreen
-   */
-  private requestFullscreen(): void {
-    const element = document.documentElement
-
-    if (element.requestFullscreen) {
-      element.requestFullscreen()
-    } else if ((element as any).webkitRequestFullscreen) {
-      (element as any).webkitRequestFullscreen()
-    } else if ((element as any).mozRequestFullScreen) {
-      (element as any).mozRequestFullScreen()
-    } else if ((element as any).msRequestFullscreen) {
-      (element as any).msRequestFullscreen()
-    }
-  }
-
-  /**
-   * Update calibration points (if using custom pattern)
-   */
-  setCalibrationPoints(points: { x: number; y: number }[]): void {
-    this.calibrationPoints = points.map(p => ({
-      x: p.x,
-      y: p.y,
-      samples: [],
-      error: 0
-    }))
-  }
-
-  /**
-   * Get current visibility state
-   */
-  isShowing(): boolean {
-    return this.isVisible
-  }
-
-  /**
-   * Cleanup
-   */
-  dispose(): void {
-    this.hide()
-    window.removeEventListener('resize', this.handleResize.bind(this))
-  }
-  
-  /**
-   * Static method to create/get a global calibration UI instance
-   * This ensures only one calibration UI exists across the entire application
-   */
-  static getGlobalInstance(config?: CalibrationUIConfig): CalibrationUI {
-    if (!CalibrationUI.globalInstance) {
-      CalibrationUI.globalInstance = new CalibrationUI(config)
-    }
-    return CalibrationUI.globalInstance
-  }
-  
-  /**
-   * Static method to show fullscreen calibration
-   * Works across any framework by ensuring overlay is always on top
-   */
-  static showFullscreenCalibration(pointIndex: number = 0): void {
-    const instance = CalibrationUI.getGlobalInstance()
-    instance.show()
-    instance.showPoint(pointIndex)
+  hide(): void {
+    this.isVisible = false
     
-    // Extra safety for framework compatibility
-    // Some frameworks like React/Vue might render after our overlay
-    setTimeout(() => {
-      instance.ensureOnTop()
-    }, 100)
+    // Cancel animation
+    if (this.animationFrame) {
+      cancelAnimationFrame(this.animationFrame)
+      this.animationFrame = null
+    }
+
+    // Clear timer
+    if (this.pointTimer) {
+      clearTimeout(this.pointTimer)
+      this.pointTimer = null
+    }
+
+    // Hide canvas
+    if (this.canvas) {
+      this.canvas.style.display = 'none'
+      if (this.ctx) {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+      }
+    }
+
+    // Exit fullscreen if we entered it
+    if (this.config.autoFullscreen && document.fullscreenElement) {
+      document.exitFullscreen().catch(err => {
+        console.warn('Failed to exit fullscreen:', err)
+      })
+    }
   }
-  
+
   /**
-   * Static method to hide calibration
+   * Set canvas size
    */
-  static hideCalibration(): void {
-    const instance = CalibrationUI.getGlobalInstance()
-    instance.hide()
+  setSize(width: number, height: number): void {
+    if (!this.canvas) return
+    this.canvas.width = width
+    this.canvas.height = height
+  }
+
+  /**
+   * Update configuration
+   */
+  updateConfig(config: Partial<CalibrationUIConfig>): void {
+    Object.assign(this.config, config)
+    if (config.canvas) {
+      this.setCanvas(config.canvas)
+    }
+  }
+
+  /**
+   * Reset calibration UI
+   */
+  reset(): void {
+    this.currentPointIndex = -1
+    this.hide()
+  }
+
+  /**
+   * Destroy the UI
+   */
+  destroy(): void {
+    this.hide()
+    this.canvas = null
+    this.ctx = null
   }
 }
