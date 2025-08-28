@@ -286,10 +286,16 @@ export class EyeTracker extends EventEmitter<EventMap> {
     
     this.setStatus(DeviceStatus.CALIBRATING)
     this.emit('calibrationStarted', { points: 5 })
-
-    // Start with first point after 3 second delay (same as raw)
-    const firstPoint = this.calibrationPoints[0]
     
+    // Show first calibration point immediately (matches raw line 446)
+    // The UI will display the first point (0-based index)
+    this.emit('calibrationProgress', {
+      current: 0,  // 0-based for display
+      total: 5
+    })
+
+    // Then wait 3 seconds before sending the command (matches raw line 447-450)
+    const firstPoint = this.calibrationPoints[0]
     setTimeout(() => {
       this.sendCommand(createCalibrationCommand(firstPoint.x, firstPoint.y))
     }, 3000)
@@ -308,12 +314,16 @@ export class EyeTracker extends EventEmitter<EventMap> {
       if (jsonIris.nFinishedNum !== undefined) {
         this.log('Finish checked!', jsonIris.nFinishedNum)
         
-        this.emit('calibrationProgress', {
-          current: jsonIris.nFinishedNum,  // This is already 1-based from the device
-          total: 5
-        })
+        // Emit progress for the NEXT point that will be shown
+        // jsonIris.nFinishedNum is 1-based: 1 means first point finished, show second point
+        if (jsonIris.nFinishedNum < 5) {
+          this.emit('calibrationProgress', {
+            current: jsonIris.nFinishedNum,  // This becomes the index for the next point (0-based)
+            total: 5
+          })
+        }
 
-        // Send next calibration point
+        // Send next calibration point after delay
         this.sendNextCalibrationPoint(jsonIris.nFinishedNum)
 
         if (jsonIris.nFinishedNum === 5) {

@@ -7,7 +7,7 @@ import { EyeTracker } from './EyeTracker'
 
 export interface CameraOverlayConfig {
   container?: HTMLElement | string  // Container element or selector
-  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center'
+  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center' | 'bottom-center' | 'top-center'
   size?: 'small' | 'medium' | 'large' | 'fullscreen'
   opacity?: number  // 0-1
   showControls?: boolean
@@ -169,6 +169,16 @@ export class CameraOverlay {
         top: '50%', 
         left: '50%', 
         transform: 'translate(-50%, -50%)' 
+      },
+      'bottom-center': {
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)'
+      },
+      'top-center': {
+        top: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)'
       }
     }
 
@@ -227,10 +237,15 @@ export class CameraOverlay {
    * Update camera frame
    */
   private updateFrame(imageData: string): void {
-    if (!this.imageElement || !this.isVisible) return
+    if (!this.imageElement) return
 
-    // Update image source (base64 data)
+    // Update image source (base64 data) - even if not visible yet
     this.imageElement.src = `data:image/jpeg;base64,${imageData}`
+    
+    // Auto-show if we receive frames and overlay is initialized
+    if (!this.isVisible && this.overlayElement) {
+      this.show()
+    }
   }
 
   /**

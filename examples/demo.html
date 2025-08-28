@@ -346,9 +346,9 @@
         });
 
         const cameraOverlay = new CameraOverlay(tracker, {
-            position: 'top-right',
+            position: 'bottom-center',  // Bottom center to avoid calibration points
             size: 'small',
-            opacity: 0.9,
+            opacity: 1,  // Full opacity to see clearly
             showControls: false,
             autoHide: false,
             zIndex: 2000  // Higher than calibration canvas (1000)
@@ -445,16 +445,23 @@
         tracker.on('connected', () => {
             console.log('Connected to eye tracker');
             // Device and light are auto-initialized by default
-            // Auto-enable camera after connection
+            // Wait for 'ready' event to enable camera
+        });
+        
+        tracker.on('ready', (data) => {
+            console.log('Device ready:', data);
+            // Device is now initialized and ready for calibration
+            // Auto-enable camera after device is ready
+            console.log('Starting camera...');
             tracker.initCamera();
             cameraOverlay.init();
             cameraOverlay.show();
             cameraToggle.checked = true;  // Update UI toggle
         });
         
-        tracker.on('ready', (data) => {
-            console.log('Device ready:', data);
-            // Device is now initialized and ready for calibration
+        // Listen for camera frames to debug
+        tracker.on('cameraFrame', (data) => {
+            console.log('Camera frame received', data.imageData ? 'with image' : 'no image');
         });
         
         tracker.on('gazeData', (data) => {

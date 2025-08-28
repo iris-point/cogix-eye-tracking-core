@@ -95,11 +95,11 @@ export class CalibrationUI {
     })
 
     this.tracker.on('calibrationProgress', (data) => {
-      // data.current is 1-based from the device, we need 0-based for array indexing
-      // The tracker will handle sending the next calibration point after delay
-      // We just need to update the visual display immediately
-      this.currentPointIndex = data.current - 1
-      // Note: showPoint is not needed here as the animation loop will draw the current point
+      // data.current represents the point index to display
+      // When current=0, show first point (initial)
+      // When current=1, show second point (after first finished), etc.
+      this.currentPointIndex = data.current
+      // The animation loop will draw the current point
     })
 
     this.tracker.on('calibrationComplete', () => {
@@ -121,7 +121,7 @@ export class CalibrationUI {
     }
 
     this.isVisible = true
-    this.currentPointIndex = 0  // Start at first point (0-based index)
+    this.currentPointIndex = -1  // Will be set to 0 by calibrationProgress event
     
     // Enter fullscreen if configured
     if (this.config.autoFullscreen && document.fullscreenElement === null) {
