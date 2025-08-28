@@ -1,6 +1,6 @@
 {
   "name": "@iris-point/eye-tracking-core",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Minimal eye tracking core library for WebSocket-based hardware eye trackers",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -64,4 +64,3 @@
   },
   "homepage": "https://github.com/iris-point/cogix-eye-tracking-core#readme"
 }
-  
