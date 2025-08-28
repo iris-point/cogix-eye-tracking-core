@@ -1,0 +1,34 @@
+# Source files
+src/
+examples/
+*.ts
+!dist/*.d.ts
+
+# Config files
+webpack.config.js
+tsconfig.json
+.gitignore
+
+# Development files
+node_modules/
+*.log
+*.tgz
+.npm
+.DS_Store
+
+# Documentation
+PUBLISHING.md
+docs/
+
+# Test files
+test/
+*.test.js
+*.spec.js
+
+# Build tools
+.github/
+.vscode/
+.idea/
+
+# Keep only dist folder and README
+# Everything else is ignored

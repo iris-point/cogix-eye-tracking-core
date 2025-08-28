@@ -128,14 +128,11 @@
     </div>
   </div>
 
-  <!-- Load the library -->
-  <script type="module">
-    import { createEyeTracker, CanvasRenderer, DeviceStatus } from '../src/index.ts'
-    
-    // For production, use:
-    // import { createEyeTracker, CanvasRenderer, DeviceStatus } from '@iris-point/eye-tracking-core'
-    // Or with CDN:
-    // const { createEyeTracker, CanvasRenderer, DeviceStatus } = IrisPointEyeTracking
+  <!-- Load the library from dist -->
+  <script src="../dist/cogix-eye-tracking-core.js"></script>
+  <script>
+    // Access the library from global namespace
+    const { createEyeTracker, CanvasRenderer, DeviceStatus } = IrisPointEyeTracking
     
     // Initialize
     const tracker = createEyeTracker({

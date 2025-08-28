@@ -57,7 +57,7 @@
   </div>
 
   <!-- Load from CDN (replace with actual CDN URL when published) -->
-  <script src="../dist/index.umd.js"></script>
+  <script src="../dist/cogix-eye-tracking-core.min.js"></script>
   
   <script>
     // Access via global object
@@ -73,9 +73,7 @@
     const renderer = new CanvasRenderer({
       canvas: canvas,
       gazeRadius: 15,
-      gazeColor: 'rgba(255, 100, 100, 0.8)',
-      trailLength: 50,
-      trailColor: 'rgba(255, 100, 100, 0.2)'
+      gazeColor: 'rgba(255, 100, 100, 0.8)'
     })
     
     // UI elements
@@ -141,7 +139,6 @@
     
     calibrateBtn.onclick = () => {
       tracker.startCalibration(5)
-      renderer.config.showCalibrationPoints = true
     }
     
     trackBtn.onclick = () => {

@@ -7,7 +7,7 @@ module.exports = (env, argv) => {
     entry: './src/index.ts',
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: isProduction ? 'index.umd.min.js' : 'index.umd.js',
+      filename: isProduction ? 'cogix-eye-tracking-core.min.js' : 'cogix-eye-tracking-core.js',
       library: 'IrisPointEyeTracking',
       libraryTarget: 'umd',
       globalObject: 'this'

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Eye Tracking - Verified Example</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #2e2d2df3;
+      font-family: Arial, sans-serif;
+    }
+    
+    #controls {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px;
+      border-radius: 5px;
+    }
+    
+    button {
+      margin: 5px;
+      padding: 8px 15px;
+      cursor: pointer;
+    }
+    
+    #messages {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      color: rgb(242, 204, 13);
+      font-size: 14px;
+    }
+    
+    #gazeCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    .calibration-point {
+      position: fixed;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(0, 255, 0, 0.8);
+      border: 2px solid white;
+      display: none;
+      z-index: 10000;
+      transform: translate(-50%, -50%);
+    }
+    
+    .gaze-dot {
+      position: fixed;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(255, 0, 0, 0.8);
+      display: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gazeCanvas"></canvas>
+  
+  <div id="controls">
+    <button onclick="initSequence()">Initialize All (步骤 1-3)</button>
+    <br>
+    <button onclick="tracker.initDevice()">1. 初始化眼动模组</button>
+    <button onclick="tracker.initLight()">2. 打开红外灯</button>
+    <button onclick="tracker.initCamera()">3. 打开摄像头</button>
+    <br>
+    <button onclick="startCalibration()">4. 校准</button>
+    <button onclick="tracker.endCamera()">关闭摄像头</button>
+  </div>
+  
+  <div id="calibration-point" class="calibration-point"></div>
+  <div id="gaze-dot" class="gaze-dot"></div>
+  
+  <div id="messages">Ready</div>
+
+  <!-- Load the library from dist -->
+  <script src="../dist/cogix-eye-tracking-core.js"></script>
+  
+  <script>
+    // Access the library
+    const { createEyeTracker, CalibrationUI } = IrisPointEyeTracking
+    
+    // Create tracker instance
+    const tracker = createEyeTracker({
+      wsUrl: ['ws://127.0.0.1:9000'],  // Same as raw example
+      debug: true
+    })
+    
+    // Create calibration UI
+    const calibrationUI = new CalibrationUI({
+      autoFullscreen: true
+    })
+    
+    // Canvas setup
+    const canvas = document.getElementById('gazeCanvas')
+    const ctx = canvas.getContext('2d')
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+    
+    // Elements
+    const messages = document.getElementById('messages')
+    const calibrationPoint = document.getElementById('calibration-point')
+    const gazeDot = document.getElementById('gaze-dot')
+    
+    // Initialize sequence - matches raw example
+    async function initSequence() {
+      try {
+        messages.textContent = 'Connecting...'
+        await tracker.connect()
+        messages.textContent = 'Connection established'
+        
+        // Follow the exact sequence from raw example
+        setTimeout(() => {
+          tracker.initDevice()  // Step 1
+          messages.textContent = 'Device initialized'
+          
+          setTimeout(() => {
+            tracker.initLight()  // Step 2
+            messages.textContent = 'IR light on'
+            
+            setTimeout(() => {
+              tracker.initCamera()  // Step 3
+              messages.textContent = 'Camera started'
+            }, 100)
+          }, 100)
+        }, 100)
+        
+      } catch (error) {
+        messages.textContent = 'Error: ' + error.message
+      }
+    }
+    
+    // Start calibration - matches raw example
+    function startCalibration() {
+      calibrationUI.show()
+      tracker.startCalibration()
+      messages.textContent = 'Calibration started'
+    }
+    
+    // Handle events
+    tracker.on('connected', () => {
+      messages.textContent = 'Connection established'
+    })
+    
+    tracker.on('disconnected', () => {
+      messages.textContent = 'Disconnection'
+    })
+    
+    tracker.on('error', (error) => {
+      messages.textContent = 'Error: ' + error.message
+    })
+    
+    tracker.on('calibrationProgress', ({ current, total }) => {
+      messages.textContent = `Calibration: ${current}/${total}`
+      
+      if (current > 0 && current <= total) {
+        calibrationUI.showPoint(current - 1)
+      }
+    })
+    
+    tracker.on('calibrationComplete', (result) => {
+      calibrationUI.hide()
+      messages.textContent = 'Calibration complete! Tracking started.'
+      gazeDot.style.display = 'block'
+      
+      // Draw grid like raw example
+      drawTrackingGrid()
+    })
+    
+    // Handle gaze data
+    tracker.on('gazeData', (data) => {
+      // Update gaze dot position
+      const x = data.x * window.innerWidth
+      const y = data.y * window.innerHeight
+      
+      gazeDot.style.left = x + 'px'
+      gazeDot.style.top = y + 'px'
+    })
+    
+    // Draw tracking grid - matches raw example draw_Sence()
+    function drawTrackingGrid() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.strokeStyle = 'white'
+      ctx.lineWidth = 1
+      
+      const pointWidth = canvas.width / 5
+      const pointHeight = canvas.height / 5
+      
+      for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 5; col++) {
+          const x = row * pointWidth + pointWidth / 2
+          const y = col * pointHeight + pointHeight / 2
+          
+          // Draw cross at each grid point
+          ctx.beginPath()
+          ctx.moveTo(x - 30, y)
+          ctx.lineTo(x + 30, y)
+          ctx.stroke()
+          
+          ctx.beginPath()
+          ctx.moveTo(x, y - 30)
+          ctx.lineTo(x, y + 30)
+          ctx.stroke()
+        }
+      }
+    }
+    
+    // Handle camera frames
+    tracker.on('cameraFrame', ({ imageData }) => {
+      // Could display camera feed if needed
+      // For now, just note that we're receiving frames
+      console.log('Receiving camera frames')
+    })
+    
+    // Window resize
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+      if (tracker.getStatus() === 'tracking') {
+        drawTrackingGrid()
+      }
+    })
+  </script>
+</body>
+</html>

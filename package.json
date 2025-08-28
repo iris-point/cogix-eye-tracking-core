@@ -1,10 +1,10 @@
 {
   "name": "@iris-point/eye-tracking-core",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Minimal eye tracking core library for WebSocket-based hardware eye trackers",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
-  "unpkg": "dist/index.umd.js",
+  "unpkg": "dist/cogix-eye-tracking-core.min.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist",
@@ -21,7 +21,13 @@
     "clean": "rimraf dist",
     "dev": "npm run build:esm -- --watch",
     "prepublishOnly": "npm run build",
-    "test": "echo \"No tests configured yet\""
+    "test": "echo \"No tests configured yet\"",
+    "release": "npm version patch && npm run build && npm publish --access public",
+    "release:patch": "npm version patch && npm run build && npm publish --access public",
+    "release:minor": "npm version minor && npm run build && npm publish --access public",
+    "release:major": "npm version major && npm run build && npm publish --access public",
+    "release:local": "npm run build && npm pack",
+    "postversion": "git push && git push --tags"
   },
   "keywords": [
     "eye-tracking",
