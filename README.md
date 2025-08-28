@@ -1,5 +1,9 @@
 # @iris-point/eye-tracking-core
 
+[![npm version](https://img.shields.io/npm/v/@iris-point/eye-tracking-core.svg)](https://www.npmjs.com/package/@iris-point/eye-tracking-core)
+[![npm downloads](https://img.shields.io/npm/dm/@iris-point/eye-tracking-core.svg)](https://www.npmjs.com/package/@iris-point/eye-tracking-core)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Minimal, lightweight eye tracking library for HH WebSocket-based hardware eye trackers. Pure JavaScript/TypeScript with no framework dependencies.
 
 ## Features
