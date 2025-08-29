@@ -370,8 +370,8 @@ export class EyeTracker extends EventEmitter<EventMap> {
         
         this.emit('calibrationComplete', result)
         
-        // Start tracking automatically - matches raw example starteyeTracer() call
-        this.startTracking()
+        // Don't start tracking automatically - let user decide when to track
+        // this.startTracking()
       }
 
       // Handle tracking data - matches raw example line 342-379
