@@ -6,6 +6,12 @@
 
 Minimal, lightweight eye tracking library for HH WebSocket-based hardware eye trackers. Pure JavaScript/TypeScript with no framework dependencies.
 
+## 🎮 Live Demo
+
+Try the live demo: [https://iris-point.github.io/cogix-eye-tracking-core/](https://iris-point.github.io/cogix-eye-tracking-core/)
+
+*Note: Requires HH eye tracker hardware and software running on port 9000*
+
 ## Features
 
 - 🎯 **Simple API** - Direct WebSocket connection to HH hardware

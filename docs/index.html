@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eye Tracker Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: #1a1a1a;
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #666;
+        }
+
+        .status-dot.connected { background: #4CAF50; }
+        .status-dot.calibrating { background: #ff9800; }
+        .status-dot.tracking { background: #2196F3; }
+
+        /* Controls */
+        .controls {
+            background: #1a1a1a;
+            padding: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #333;
+        }
+
+        button {
+            background: #2a2a2a;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #333;
+            border-color: #666;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button.primary {
+            background: #2563eb;
+            border-color: #3b82f6;
+        }
+
+        button.primary:hover:not(:disabled) {
+            background: #3b82f6;
+        }
+
+        button.danger {
+            background: #dc2626;
+            border-color: #ef4444;
+        }
+
+        button.danger:hover:not(:disabled) {
+            background: #ef4444;
+        }
+
+        .camera-toggle {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #333;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #999;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2563eb;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+            background-color: white;
+        }
+
+        /* Main content */
+        .main {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+
+        /* Calibration canvas - fullscreen overlay */
+        #calibrationCanvas {
+            position: fixed;  /* Fixed to viewport, not relative to container */
+            top: 0;
+            left: 0;
+            width: 100vw;  /* Full viewport width */
+            height: 100vh;  /* Full viewport height */
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            z-index: 1000;  /* High z-index to cover everything */
+        }
+        
+        /* Fullscreen tracking canvas - overlay like calibration */
+        #fullscreenTrackingCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            z-index: 1000;
+        }
+
+        /* Data panel */
+        .data-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(26, 26, 26, 0.95);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            min-width: 200px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+
+        .data-label {
+            color: #999;
+        }
+
+        .data-value {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* Loading/message overlay */
+        .message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(26, 26, 26, 0.95);
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 30px 40px;
+            text-align: center;
+            display: none;
+            z-index: 50;
+        }
+
+        .message h2 {
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+
+        .message p {
+            color: #999;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="title">
+            <span>👁️</span>
+            <span>Eye Tracker Demo</span>
+        </div>
+        <div class="status">
+            <span id="statusText">Disconnected</span>
+            <div class="status-dot" id="statusDot"></div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button id="connectBtn" class="primary">Connect</button>
+        <button id="calibrateBtn" disabled>Calibrate</button>
+        <button id="trackBtn" disabled>Start Tracking</button>
+        <button id="stopBtn" class="danger" disabled>Stop</button>
+        <button id="disconnectBtn" disabled>Disconnect</button>
+        
+        <div class="camera-toggle">
+            <span>Camera</span>
+            <label class="switch">
+                <input type="checkbox" id="cameraToggle" disabled>
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Main content area -->
+    <div class="main">
+        <!-- Data display panel -->
+        <div class="data-panel" id="dataPanel" style="display: none;">
+            <div class="data-row">
+                <span class="data-label">X:</span>
+                <span class="data-value" id="gazeX">-</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Y:</span>
+                <span class="data-value" id="gazeY">-</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Confidence:</span>
+                <span class="data-value" id="gazeConf">-</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">FPS:</span>
+                <span class="data-value" id="fps">-</span>
+            </div>
+        </div>
+
+        <!-- Message overlay -->
+        <div class="message" id="message">
+            <h2 id="messageTitle">Welcome</h2>
+            <p id="messageText">Click Connect to begin</p>
+        </div>
+    </div>
+
+    <!-- Calibration canvas (fullscreen overlay, outside main container) -->
+    <canvas id="calibrationCanvas"></canvas>
+    
+    <!-- Tracking canvas (fullscreen overlay, outside main container) -->
+    <canvas id="fullscreenTrackingCanvas"></canvas>
+
+    <!-- Include the SDK from CDN -->
+    <script src="https://unpkg.com/@iris-point/eye-tracking-core@latest/dist/cogix-eye-tracking-core.min.js"></script>
+
+    <script>
+        // IMPORTANT: If using Live Server, it may interfere with WebSocket connections
+        // Live Server injects its own WebSocket for live reloading which can conflict
+        // To test properly:
+        // 1. Open the HTML file directly in browser (file:/// protocol)
+        // 2. Or use a simple HTTP server without live reload: python -m http.server
+        // 3. Or disable Live Server's live reload feature
+        // Get SDK components
+        const { EyeTracker, CalibrationUI, CanvasRenderer, CameraOverlay, DeviceStatus } = 
+            window.IrisPointEyeTracking;
+        
+        // Create tracker instance
+        const tracker = new EyeTracker({
+            wsUrl: 'ws://127.0.0.1:9000',  // Use ws:// on port 9000 (or 'wss://127.0.0.1:8443' for secure)
+            autoInitialize: false,  // Don't auto-init, let's do it manually like raw example
+            initDelay: 500,        // 500ms delay between device init and light init
+            debug: true   // Enable debug to see what's happening
+        });
+
+        // Create UI components
+        const calibrationUI = new CalibrationUI(tracker, {
+            canvas: document.getElementById('calibrationCanvas'),
+            pointDuration: 3000,  // Matches the tracker's 3s delay
+            pointSize: 20,
+            pointColor: '#4CAF50',
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+            showInstructions: false,  // Minimal UI like raw example
+            autoFullscreen: true  // Auto fullscreen for calibration
+        });
+
+        // Fullscreen tracking canvas renderer (only renderer needed)
+        const fullscreenTrackingRenderer = new CanvasRenderer(tracker, {
+            canvas: document.getElementById('fullscreenTrackingCanvas'),
+            showGazePoint: true,
+            gazePointSize: 20,
+            gazePointColor: '#ff0000',
+            showTrail: true,
+            trailLength: 50,
+            trailFadeOut: true,
+            showHeatmap: false,
+            clearOnStop: true
+        });
+
+        const cameraOverlay = new CameraOverlay(tracker, {
+            position: 'bottom-center',  // Bottom center to avoid calibration points
+            size: 'small',
+            opacity: 1,  // Full opacity to see clearly
+            showControls: false,
+            autoHide: false,
+            zIndex: 2000  // Higher than calibration canvas (1000)
+        });
+
+        // Get UI elements
+        const connectBtn = document.getElementById('connectBtn');
+        const calibrateBtn = document.getElementById('calibrateBtn');
+        const trackBtn = document.getElementById('trackBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const cameraToggle = document.getElementById('cameraToggle');
+        const statusText = document.getElementById('statusText');
+        const statusDot = document.getElementById('statusDot');
+        const dataPanel = document.getElementById('dataPanel');
+        const message = document.getElementById('message');
+        const messageTitle = document.getElementById('messageTitle');
+        const messageText = document.getElementById('messageText');
+        
+        // FPS calculation
+        let frameCount = 0;
+        let lastFpsUpdate = Date.now();
+        
+        // Show/hide message
+        function showMessage(title, text) {
+            messageTitle.textContent = title;
+            messageText.textContent = text;
+            message.style.display = 'block';
+        }
+        
+        function hideMessage() {
+            message.style.display = 'none';
+        }
+        
+        // Update UI based on status
+        function updateUI(status) {
+            statusText.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+            statusDot.className = 'status-dot';
+            
+            switch(status) {
+                case DeviceStatus.DISCONNECTED:
+                    connectBtn.disabled = false;
+                    calibrateBtn.disabled = true;
+                    trackBtn.disabled = true;
+                    stopBtn.disabled = true;
+                    disconnectBtn.disabled = true;
+                    cameraToggle.disabled = true;
+                    dataPanel.style.display = 'none';
+                    showMessage('Disconnected', 'Click Connect to begin');
+                    break;
+                    
+                case DeviceStatus.CONNECTED:
+                    statusDot.classList.add('connected');
+                    connectBtn.disabled = true;
+                    calibrateBtn.disabled = false;
+                    trackBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    cameraToggle.disabled = false;
+                    cameraToggle.checked = true;  // Show camera is on
+                    hideMessage();
+                    break;
+                    
+                case DeviceStatus.CALIBRATING:
+                    statusDot.classList.add('calibrating');
+                    calibrateBtn.disabled = true;
+                    trackBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    cameraToggle.disabled = false;  // Allow camera toggle during calibration
+                    document.getElementById('calibrationCanvas').style.display = 'block';
+                    hideMessage();  // Hide any message during calibration
+                    break;
+                    
+                case DeviceStatus.TRACKING:
+                    statusDot.classList.add('tracking');
+                    calibrateBtn.disabled = true;
+                    trackBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    cameraToggle.disabled = false;
+                    dataPanel.style.display = 'block';
+                    document.getElementById('calibrationCanvas').style.display = 'none';
+                    hideMessage();
+                    break;
+            }
+        }
+        
+        // Event listeners for tracker
+        tracker.on('statusChanged', (status) => {
+            updateUI(status);
+        });
+        
+        tracker.on('connected', () => {
+            console.log('Connected to eye tracker');
+            // Manually initialize like the raw example
+            setTimeout(() => {
+                console.log('Initializing device...');
+                tracker.initDevice();
+                setTimeout(() => {
+                    console.log('Initializing light...');
+                    tracker.initLight();
+                    setTimeout(() => {
+                        console.log('Initializing camera...');
+                        tracker.initCamera();
+                        cameraOverlay.init();
+                        cameraOverlay.show();
+                        cameraToggle.checked = true;
+                    }, 500);
+                }, 500);
+            }, 100);
+        });
+        
+        tracker.on('ready', (data) => {
+            console.log('Device ready:', data);
+            // Device is now initialized and ready for calibration
+        });
+        
+        // Listen for camera frames to debug
+        tracker.on('cameraFrame', (data) => {
+            console.log('Camera frame received', {
+                hasImageData: !!data.imageData,
+                imageDataLength: data.imageData ? data.imageData.length : 0,
+                dataType: typeof data.imageData,
+                firstChars: data.imageData ? data.imageData.substring(0, 50) : null
+            });
+            
+            // Manually update the camera overlay if needed
+            if (data.imageData && cameraOverlay.visible) {
+                const img = document.querySelector('.eye-tracker-camera-image');
+                if (img) {
+                    img.src = `data:image/jpeg;base64,${data.imageData}`;
+                }
+            }
+        });
+        
+        tracker.on('gazeData', (data) => {
+            // Update data display
+            document.getElementById('gazeX').textContent = data.x.toFixed(4);
+            document.getElementById('gazeY').textContent = data.y.toFixed(4);
+            document.getElementById('gazeConf').textContent = (data.confidence || 0).toFixed(2);
+            
+            // Calculate FPS
+            frameCount++;
+            const now = Date.now();
+            if (now - lastFpsUpdate > 1000) {
+                document.getElementById('fps').textContent = frameCount.toFixed(0);
+                frameCount = 0;
+                lastFpsUpdate = now;
+            }
+        });
+        
+        tracker.on('calibrationProgress', (data) => {
+            console.log(`Calibration: ${data.current}/${data.total}`);
+        });
+        
+        tracker.on('calibrationComplete', (result) => {
+            console.log('Calibration complete:', result);
+            
+            // Hide calibration canvas
+            document.getElementById('calibrationCanvas').style.display = 'none';
+            
+            // Exit fullscreen after calibration
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(err => {
+                    console.warn('Failed to exit fullscreen:', err);
+                });
+            }
+            
+            // Update UI to show calibration is complete and ready to track
+            updateUI(DeviceStatus.CONNECTED);
+            showMessage('Calibration Complete', 'Ready to start tracking');
+            setTimeout(hideMessage, 3000);
+        });
+        
+        tracker.on('calibrationCancelled', () => {
+            console.log('Calibration cancelled');
+            document.getElementById('calibrationCanvas').style.display = 'none';
+            // Exit fullscreen if it was entered
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(err => {
+                    console.warn('Failed to exit fullscreen:', err);
+                });
+            }
+            // Return to connected state
+            updateUI(DeviceStatus.CONNECTED);
+        });
+        
+        tracker.on('statusChanged', (status) => {
+            console.log('Status changed to:', status);
+            if (status === DeviceStatus.TRACKING) {
+                // Update UI when tracking starts
+                updateUI(DeviceStatus.TRACKING);
+            }
+        });
+        
+        tracker.on('error', (error) => {
+            console.error('Tracker error:', error);
+            showMessage('Error', error.message);
+        });
+        
+        // Button handlers
+        connectBtn.addEventListener('click', async () => {
+            showMessage('Connecting...', 'Please wait');
+            try {
+                await tracker.connect();
+            } catch (error) {
+                showMessage('Connection Failed', error.message);
+                setTimeout(hideMessage, 3000);
+            }
+        });
+        
+        calibrateBtn.addEventListener('click', () => {
+            // Camera should already be on from connection
+            // Just start calibration
+            tracker.startCalibration();
+        });
+        
+        trackBtn.addEventListener('click', () => {
+            // Show fullscreen tracking canvas (like calibration)
+            document.getElementById('fullscreenTrackingCanvas').style.display = 'block';
+            
+            // Enter fullscreen
+            document.documentElement.requestFullscreen().catch(err => {
+                console.warn('Failed to enter fullscreen:', err);
+            });
+            
+            tracker.startTracking();
+        });
+        
+        stopBtn.addEventListener('click', () => {
+            const status = tracker.getStatus();
+            if (status === DeviceStatus.CALIBRATING) {
+                tracker.stopCalibration();
+                // Hide calibration canvas immediately
+                document.getElementById('calibrationCanvas').style.display = 'none';
+                // Exit fullscreen if in fullscreen mode
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(err => {
+                        console.warn('Failed to exit fullscreen:', err);
+                    });
+                }
+            } else if (status === DeviceStatus.TRACKING) {
+                tracker.stopTracking();
+                
+                // Hide fullscreen tracking canvas
+                document.getElementById('fullscreenTrackingCanvas').style.display = 'none';
+                
+                // Exit fullscreen
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(err => {
+                        console.warn('Failed to exit fullscreen:', err);
+                    });
+                }
+            }
+        });
+        
+        disconnectBtn.addEventListener('click', () => {
+            tracker.disconnect();
+            
+            // Always hide camera on disconnect
+            cameraToggle.checked = false;
+            cameraOverlay.hide();
+            
+            // Hide fullscreen tracking canvas if visible
+            document.getElementById('fullscreenTrackingCanvas').style.display = 'none';
+            
+            // Exit fullscreen if in fullscreen
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(err => {
+                    console.warn('Failed to exit fullscreen:', err);
+                });
+            }
+        });
+        
+        // Camera toggle
+        cameraToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                tracker.initCamera();
+                cameraOverlay.init();
+                cameraOverlay.show();
+            } else {
+                cameraOverlay.hide();
+                tracker.endCamera();
+            }
+        });
+        
+        // Initialize with disconnected state
+        updateUI(DeviceStatus.DISCONNECTED);
+        
+        // Add escape key handler to stop calibration or tracking
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const status = tracker.getStatus();
+                
+                if (status === DeviceStatus.CALIBRATING) {
+                    tracker.stopCalibration();
+                    // Hide calibration canvas immediately
+                    document.getElementById('calibrationCanvas').style.display = 'none';
+                    // Exit fullscreen if in fullscreen mode
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen().catch(err => {
+                            console.warn('Failed to exit fullscreen:', err);
+                        });
+                    }
+                } else if (status === DeviceStatus.TRACKING) {
+                    tracker.stopTracking();
+                    
+                    // Hide fullscreen tracking canvas
+                    document.getElementById('fullscreenTrackingCanvas').style.display = 'none';
+                    
+                    // Exit fullscreen
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen().catch(err => {
+                            console.warn('Failed to exit fullscreen:', err);
+                        });
+                    }
+                }
+            }
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            tracker.disconnect();
+            cameraOverlay.destroy();
+        });
+        
+        // Resize canvases to match window
+        function resizeCanvases() {
+            // Calibration canvas uses full viewport
+            document.getElementById('calibrationCanvas').width = window.innerWidth;
+            document.getElementById('calibrationCanvas').height = window.innerHeight;
+            
+            // Fullscreen tracking canvas uses full viewport
+            document.getElementById('fullscreenTrackingCanvas').width = window.innerWidth;
+            document.getElementById('fullscreenTrackingCanvas').height = window.innerHeight;
+        }
+        
+        window.addEventListener('resize', resizeCanvases);
+        resizeCanvases();
+    </script>
+</body>
+</html>
