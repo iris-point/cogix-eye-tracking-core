@@ -517,14 +517,21 @@
         
         tracker.on('calibrationComplete', (result) => {
             console.log('Calibration complete:', result);
+            
+            // Hide calibration canvas
             document.getElementById('calibrationCanvas').style.display = 'none';
-            // Exit fullscreen after calibration if it was entered
+            
+            // Exit fullscreen after calibration
             if (document.fullscreenElement) {
                 document.exitFullscreen().catch(err => {
                     console.warn('Failed to exit fullscreen:', err);
                 });
             }
-            // SDK automatically starts tracking after calibration
+            
+            // Update UI to show calibration is complete and ready to track
+            updateUI(DeviceStatus.CONNECTED);
+            showMessage('Calibration Complete', 'Ready to start tracking');
+            setTimeout(hideMessage, 3000);
         });
         
         tracker.on('calibrationCancelled', () => {
@@ -538,6 +545,14 @@
             }
             // Return to connected state
             updateUI(DeviceStatus.CONNECTED);
+        });
+        
+        tracker.on('statusChanged', (status) => {
+            console.log('Status changed to:', status);
+            if (status === DeviceStatus.TRACKING) {
+                // Update UI when tracking starts
+                updateUI(DeviceStatus.TRACKING);
+            }
         });
         
         tracker.on('error', (error) => {
