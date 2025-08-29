@@ -7,10 +7,8 @@ import { EventEmitter } from './EventEmitter'
 import { DataBuffer } from './DataBuffer'
 import {
   GazeData,
-  CalibrationPoint,
   CalibrationResult,
   DeviceStatus,
-  DeviceInfo,
   CoreConfig,
   EventMap,
   TrackerOutput
@@ -99,10 +97,14 @@ export class EyeTracker extends EventEmitter<EventMap> {
   private dataBuffer: DataBuffer
   private isCalibrating: boolean = false
   private calibrationStep: number = 0
+  private calibrationFinished: boolean = false
   private cameraEnabled: boolean = false
   private cameraFlipped: boolean = false
   private autoInitialize: boolean = true
   private isInitialized: boolean = false
+  private isTracking: boolean = false
+  private lastStatusCode: string | null = null
+  private deviceConnected: boolean = false
   
   // Calibration points - same as raw example
   private calibrationPoints = [
@@ -162,6 +164,11 @@ export class EyeTracker extends EventEmitter<EventMap> {
         this.websocket.onopen = () => {
           this.log('Connection established')
           this.setStatus(DeviceStatus.CONNECTED)
+          
+          // Send stopCalibration to ensure device is in clean state
+          // This prevents getting stuck if device was in calibration mode
+          this.sendCommand(COMMANDS.STOP_CALIBRATION)
+          
           this.emit('connected', undefined)
           
           // Auto-initialize device if enabled
@@ -340,6 +347,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
       if (jsonIris.cablicFinished) {
         this.log('Calibration finished')
         this.isCalibrating = false
+        this.calibrationFinished = true
         
         const result: CalibrationResult = {
           success: true,
@@ -349,7 +357,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
         
         this.emit('calibrationComplete', result)
         
-        // Start tracking automatically
+        // Start tracking automatically - matches raw example starteyeTracer() call
         this.startTracking()
       }
 
@@ -421,9 +429,15 @@ export class EyeTracker extends EventEmitter<EventMap> {
       }
 
       // Handle status code - matches raw example line 389-392
-      if (jsonIris.statusCode === "5001") {
-        this.setStatus(DeviceStatus.DISCONNECTED)
-        this.emit('error', new Error('设备未接入'))
+      if (jsonIris.statusCode) {
+        this.lastStatusCode = jsonIris.statusCode
+        if (jsonIris.statusCode === "5001") {
+          this.deviceConnected = false
+          this.setStatus(DeviceStatus.DISCONNECTED)
+          this.emit('error', new Error('设备未接入'))
+        } else {
+          this.deviceConnected = true
+        }
       }
 
     } catch (error) {
@@ -508,6 +522,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
   startTracking(): void {
     this.sendCommand(COMMANDS.START_TRACKER)
     this.setStatus(DeviceStatus.TRACKING)
+    this.isTracking = true
   }
 
   /**
@@ -516,6 +531,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
   stopTracking(): void {
     this.sendCommand(COMMANDS.STOP_TRACKER)
     this.setStatus(DeviceStatus.CONNECTED)
+    this.isTracking = false
   }
 
   /**
@@ -549,6 +565,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
   stopCalibration(): void {
     this.sendCommand(COMMANDS.STOP_CALIBRATION)
     this.isCalibrating = false
+    this.calibrationFinished = false
     this.emit('calibrationCancelled', undefined)
     this.setStatus(DeviceStatus.CONNECTED)
   }
@@ -560,6 +577,7 @@ export class EyeTracker extends EventEmitter<EventMap> {
     this.sendCommand(COMMANDS.RESTART_CALIBRATION)
     this.isCalibrating = true
     this.calibrationStep = 0
+    this.calibrationFinished = false
     this.emit('calibrationRestarted', undefined)
     this.setStatus(DeviceStatus.CALIBRATING)
   }
@@ -611,9 +629,13 @@ export class EyeTracker extends EventEmitter<EventMap> {
     }
     
     this.isCalibrating = false
+    this.calibrationFinished = false
     this.cameraEnabled = false
     this.cameraFlipped = false
     this.isInitialized = false
+    this.isTracking = false
+    this.deviceConnected = false
+    this.lastStatusCode = null
     this.setStatus(DeviceStatus.DISCONNECTED)
   }
 
@@ -647,5 +669,116 @@ export class EyeTracker extends EventEmitter<EventMap> {
     this.disconnect()
     this.removeAllListeners()
     this.dataBuffer.clear()
+  }
+
+  // Status checking methods - matching raw client examples
+
+  /**
+   * Check if WebSocket connection is open
+   */
+  isConnected(): boolean {
+    return this.websocket !== null && this.websocket.readyState === WebSocket.OPEN
+  }
+
+  /**
+   * Check if device hardware is connected
+   * Returns false if device sends statusCode 5001
+   */
+  isDeviceConnected(): boolean {
+    return this.deviceConnected && this.isConnected()
+  }
+
+  /**
+   * Check if device has been initialized
+   */
+  isDeviceInitialized(): boolean {
+    return this.isInitialized
+  }
+
+  /**
+   * Check if currently calibrating
+   */
+  isCalibrationInProgress(): boolean {
+    return this.isCalibrating
+  }
+
+  /**
+   * Check if calibration has been completed successfully
+   */
+  isCalibrationComplete(): boolean {
+    return this.calibrationFinished
+  }
+
+  /**
+   * Check if currently tracking
+   */
+  isTrackingActive(): boolean {
+    return this.isTracking
+  }
+
+  /**
+   * Get detailed status information
+   */
+  getDetailedStatus(): {
+    connectionStatus: DeviceStatus
+    websocketState: 'connecting' | 'open' | 'closing' | 'closed' | 'not_initialized'
+    deviceConnected: boolean
+    initialized: boolean
+    calibrating: boolean
+    calibrationComplete: boolean
+    tracking: boolean
+    cameraEnabled: boolean
+    cameraFlipped: boolean
+    lastStatusCode: string | null
+  } {
+    let wsState: 'connecting' | 'open' | 'closing' | 'closed' | 'not_initialized' = 'not_initialized'
+    
+    if (this.websocket) {
+      switch (this.websocket.readyState) {
+        case WebSocket.CONNECTING:
+          wsState = 'connecting'
+          break
+        case WebSocket.OPEN:
+          wsState = 'open'
+          break
+        case WebSocket.CLOSING:
+          wsState = 'closing'
+          break
+        case WebSocket.CLOSED:
+          wsState = 'closed'
+          break
+      }
+    }
+
+    return {
+      connectionStatus: this.status,
+      websocketState: wsState,
+      deviceConnected: this.deviceConnected,
+      initialized: this.isInitialized,
+      calibrating: this.isCalibrating,
+      calibrationComplete: this.calibrationFinished,
+      tracking: this.isTracking,
+      cameraEnabled: this.cameraEnabled,
+      cameraFlipped: this.cameraFlipped,
+      lastStatusCode: this.lastStatusCode
+    }
+  }
+
+  /**
+   * Check overall readiness for tracking
+   * Returns true if device is connected, initialized, calibrated, and ready to track
+   */
+  isReady(): boolean {
+    return this.isDeviceConnected() && 
+           this.isDeviceInitialized() && 
+           this.isCalibrationComplete() && 
+           !this.isCalibrating
+  }
+
+  /**
+   * Get last status code received from device
+   */
+  getLastStatusCode(): string | null {
+    return this.lastStatusCode
   }
 }

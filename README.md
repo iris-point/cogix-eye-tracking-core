@@ -252,6 +252,33 @@ tracker.on('gazeData', (data) => {
 initialize()
 ```
 
+## Development
+
+### Running the Example
+
+```bash
+# Install dependencies
+npm install
+
+# Build the SDK
+npm run build
+
+# Run the example server (no WebSocket interference)
+npm run example
+```
+
+Then open http://localhost:8080/demo.html in your browser.
+
+**Note:** Avoid using Live Server as it injects WebSocket code that interferes with the eye tracker connection. The `npm run example` command runs a simple HTTP server without WebSocket injection.
+
+### Build Commands
+
+```bash
+npm run build       # Build all formats (ESM, CJS, UMD)
+npm run dev         # Watch mode for development
+npm run clean       # Clean dist directory
+```
+
 ## Browser Compatibility
 
 - Chrome 90+

@@ -20,6 +20,7 @@
     "build:types": "tsc --emitDeclarationOnly --declaration --outDir dist",
     "clean": "rimraf dist",
     "dev": "npm run build:esm -- --watch",
+    "example": "node examples/server.js",
     "prepublishOnly": "npm run build",
     "test": "echo \"No tests configured yet\"",
     "release": "node scripts/release.js",

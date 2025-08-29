@@ -232,6 +232,13 @@ export class CalibrationUI {
     this.ctx.textAlign = 'center'
     this.ctx.textBaseline = 'bottom'
     this.ctx.fillText(progress, this.canvas.width / 2, this.canvas.height - 20)
+    
+    // Draw escape instruction at top
+    this.ctx.font = '12px Arial'
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'
+    this.ctx.textAlign = 'center'
+    this.ctx.textBaseline = 'top'
+    this.ctx.fillText('Press ESC or Stop button to cancel calibration', this.canvas.width / 2, 20)
   }
 
   /**

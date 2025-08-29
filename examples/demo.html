@@ -310,6 +310,12 @@
     <script src="../dist/cogix-eye-tracking-core.js"></script>
     
     <script>
+        // IMPORTANT: If using Live Server, it may interfere with WebSocket connections
+        // Live Server injects its own WebSocket for live reloading which can conflict
+        // To test properly:
+        // 1. Open the HTML file directly in browser (file:/// protocol)
+        // 2. Or use a simple HTTP server without live reload: python -m http.server
+        // 3. Or disable Live Server's live reload feature
         // Get SDK components
         const { EyeTracker, CalibrationUI, CanvasRenderer, CameraOverlay, DeviceStatus } = 
             window.IrisPointEyeTracking;
@@ -469,7 +475,7 @@
         
         // Listen for camera frames to debug
         tracker.on('cameraFrame', (data) => {
-            console.log('Camera frame received', data.imageData ? 'with image' : 'no image');
+            // console.log('Camera frame received', data.imageData ? 'with image' : 'no image');
         });
         
         tracker.on('gazeData', (data) => {
@@ -501,8 +507,20 @@
                     console.warn('Failed to exit fullscreen:', err);
                 });
             }
-            // Auto-start tracking after calibration
-            tracker.startTracking();
+            // SDK automatically starts tracking after calibration
+        });
+        
+        tracker.on('calibrationCancelled', () => {
+            console.log('Calibration cancelled');
+            document.getElementById('calibrationCanvas').style.display = 'none';
+            // Exit fullscreen if it was entered
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(err => {
+                    console.warn('Failed to exit fullscreen:', err);
+                });
+            }
+            // Return to connected state
+            updateUI(DeviceStatus.CONNECTED);
         });
         
         tracker.on('error', (error) => {
@@ -535,10 +553,17 @@
             const status = tracker.getStatus();
             if (status === DeviceStatus.CALIBRATING) {
                 tracker.stopCalibration();
+                // Hide calibration canvas immediately
+                document.getElementById('calibrationCanvas').style.display = 'none';
+                // Exit fullscreen if in fullscreen mode
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(err => {
+                        console.warn('Failed to exit fullscreen:', err);
+                    });
+                }
             } else if (status === DeviceStatus.TRACKING) {
                 tracker.stopTracking();
             }
-            document.getElementById('calibrationCanvas').style.display = 'none';
         });
         
         disconnectBtn.addEventListener('click', () => {
@@ -563,6 +588,21 @@
         
         // Initialize with disconnected state
         updateUI(DeviceStatus.DISCONNECTED);
+        
+        // Add escape key handler to stop calibration
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && tracker.getStatus() === DeviceStatus.CALIBRATING) {
+                tracker.stopCalibration();
+                // Hide calibration canvas immediately
+                document.getElementById('calibrationCanvas').style.display = 'none';
+                // Exit fullscreen if in fullscreen mode
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(err => {
+                        console.warn('Failed to exit fullscreen:', err);
+                    });
+                }
+            }
+        });
         
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
