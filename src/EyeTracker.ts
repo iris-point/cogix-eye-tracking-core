@@ -279,9 +279,11 @@ export class EyeTracker extends EventEmitter<EventMap> {
    * Initialize camera - matches raw example initCamera()
    */
   initCamera(): void {
+    this.log('Initializing camera, sending START_CAMERA command')
     this.sendCommand(COMMANDS.START_CAMERA)
     this.cameraEnabled = true
     this.emit('cameraStarted', undefined)
+    this.log('Camera initialization command sent')
   }
 
   /**
@@ -320,6 +322,17 @@ export class EyeTracker extends EventEmitter<EventMap> {
       // Decode from Base64 - matches raw example line 302
       const decodedCmd = atob(data)
       const jsonIris = JSON.parse(decodedCmd)
+      
+      // Debug: Log all received data keys
+      const keys = Object.keys(jsonIris)
+      if (keys.length > 0) {
+        this.log('Received data with keys:', keys)
+        
+        // Specifically check for camera data
+        if (jsonIris.bg_img !== undefined) {
+          this.log('Camera data received! Length:', jsonIris.bg_img ? jsonIris.bg_img.length : 0)
+        }
+      }
 
       // Handle calibration progress - matches raw example line 313-335
       if (jsonIris.nFinishedNum !== undefined) {
@@ -417,6 +430,9 @@ export class EyeTracker extends EventEmitter<EventMap> {
 
       // Handle camera image - matches raw example line 380-387
       if (jsonIris.bg_img) {
+        this.log('Emitting camera frame, image data length:', jsonIris.bg_img.length)
+        this.log('First 100 chars of image data:', jsonIris.bg_img.substring(0, 100))
+        
         this.emit('cameraFrame', {
           imageData: jsonIris.bg_img,
           timestamp: Date.now()
@@ -591,6 +607,11 @@ export class EyeTracker extends EventEmitter<EventMap> {
       const decodedCmd = btoa(JSON.stringify(command))
       this.websocket.send(decodedCmd)
       this.log('Sent command:', command.req_cmd)
+      
+      // Extra debug for camera command
+      if (command.req_cmd === 'startCamera') {
+        this.log('Full camera command sent:', JSON.stringify(command))
+      }
     }
   }
 

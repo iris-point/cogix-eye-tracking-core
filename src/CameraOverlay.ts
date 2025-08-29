@@ -213,6 +213,14 @@ export class CameraOverlay {
   private setupEventListeners(): void {
     // Listen for camera frames
     this.tracker.on('cameraFrame', (data) => {
+      console.log('[CameraOverlay] cameraFrame event received in setupEventListeners')
+      
+      // Make sure overlay is initialized before updating frame
+      if (!this.overlayElement) {
+        console.log('[CameraOverlay] Overlay not initialized, initializing now')
+        this.init()
+      }
+      
       this.updateFrame(data.imageData)
     })
 
@@ -237,13 +245,25 @@ export class CameraOverlay {
    * Update camera frame
    */
   private updateFrame(imageData: string): void {
-    if (!this.imageElement) return
+    console.log('[CameraOverlay] updateFrame called', {
+      hasImageElement: !!this.imageElement,
+      hasOverlayElement: !!this.overlayElement,
+      isVisible: this.isVisible,
+      imageDataLength: imageData ? imageData.length : 0,
+      imageDataPreview: imageData ? imageData.substring(0, 30) : null
+    })
+    
+    if (!this.imageElement) {
+      console.warn('[CameraOverlay] No image element available')
+      return
+    }
 
     // Update image source (base64 data) - even if not visible yet
     this.imageElement.src = `data:image/jpeg;base64,${imageData}`
     
     // Auto-show if we receive frames and overlay is initialized
     if (!this.isVisible && this.overlayElement) {
+      console.log('[CameraOverlay] Auto-showing overlay as we received frames')
       this.show()
     }
   }

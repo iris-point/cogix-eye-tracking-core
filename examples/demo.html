@@ -164,15 +164,6 @@
             overflow: hidden;
         }
 
-        /* Tracking canvas */
-        #trackingCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: transparent;
-        }
 
         /* Calibration canvas - fullscreen overlay */
         #calibrationCanvas {
@@ -184,6 +175,18 @@
             background: rgba(0, 0, 0, 0.95);
             display: none;
             z-index: 1000;  /* High z-index to cover everything */
+        }
+        
+        /* Fullscreen tracking canvas - overlay like calibration */
+        #fullscreenTrackingCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            z-index: 1000;
         }
 
         /* Data panel */
@@ -273,9 +276,6 @@
 
     <!-- Main content area -->
     <div class="main">
-        <!-- Tracking visualization canvas -->
-        <canvas id="trackingCanvas"></canvas>
-        
         <!-- Data display panel -->
         <div class="data-panel" id="dataPanel" style="display: none;">
             <div class="data-row">
@@ -305,6 +305,9 @@
 
     <!-- Calibration canvas (fullscreen overlay, outside main container) -->
     <canvas id="calibrationCanvas"></canvas>
+    
+    <!-- Tracking canvas (fullscreen overlay, outside main container) -->
+    <canvas id="fullscreenTrackingCanvas"></canvas>
 
     <!-- Include the SDK -->
     <script src="../dist/cogix-eye-tracking-core.js"></script>
@@ -339,13 +342,14 @@
             autoFullscreen: true  // Auto fullscreen for calibration
         });
 
-        const canvasRenderer = new CanvasRenderer(tracker, {
-            canvas: document.getElementById('trackingCanvas'),
+        // Fullscreen tracking canvas renderer (only renderer needed)
+        const fullscreenTrackingRenderer = new CanvasRenderer(tracker, {
+            canvas: document.getElementById('fullscreenTrackingCanvas'),
             showGazePoint: true,
-            gazePointSize: 15,
+            gazePointSize: 20,
             gazePointColor: '#ff0000',
             showTrail: true,
-            trailLength: 30,
+            trailLength: 50,
             trailFadeOut: true,
             showHeatmap: false,
             clearOnStop: true
@@ -475,7 +479,20 @@
         
         // Listen for camera frames to debug
         tracker.on('cameraFrame', (data) => {
-            // console.log('Camera frame received', data.imageData ? 'with image' : 'no image');
+            console.log('Camera frame received', {
+                hasImageData: !!data.imageData,
+                imageDataLength: data.imageData ? data.imageData.length : 0,
+                dataType: typeof data.imageData,
+                firstChars: data.imageData ? data.imageData.substring(0, 50) : null
+            });
+            
+            // Manually update the camera overlay if needed
+            if (data.imageData && cameraOverlay.visible) {
+                const img = document.querySelector('.eye-tracker-camera-image');
+                if (img) {
+                    img.src = `data:image/jpeg;base64,${data.imageData}`;
+                }
+            }
         });
         
         tracker.on('gazeData', (data) => {
@@ -546,6 +563,14 @@
         });
         
         trackBtn.addEventListener('click', () => {
+            // Show fullscreen tracking canvas (like calibration)
+            document.getElementById('fullscreenTrackingCanvas').style.display = 'block';
+            
+            // Enter fullscreen
+            document.documentElement.requestFullscreen().catch(err => {
+                console.warn('Failed to enter fullscreen:', err);
+            });
+            
             tracker.startTracking();
         });
         
@@ -563,14 +588,34 @@
                 }
             } else if (status === DeviceStatus.TRACKING) {
                 tracker.stopTracking();
+                
+                // Hide fullscreen tracking canvas
+                document.getElementById('fullscreenTrackingCanvas').style.display = 'none';
+                
+                // Exit fullscreen
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(err => {
+                        console.warn('Failed to exit fullscreen:', err);
+                    });
+                }
             }
         });
         
         disconnectBtn.addEventListener('click', () => {
             tracker.disconnect();
-            if (cameraToggle.checked) {
-                cameraToggle.checked = false;
-                cameraOverlay.hide();
+            
+            // Always hide camera on disconnect
+            cameraToggle.checked = false;
+            cameraOverlay.hide();
+            
+            // Hide fullscreen tracking canvas if visible
+            document.getElementById('fullscreenTrackingCanvas').style.display = 'none';
+            
+            // Exit fullscreen if in fullscreen
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(err => {
+                    console.warn('Failed to exit fullscreen:', err);
+                });
             }
         });
         
@@ -589,17 +634,33 @@
         // Initialize with disconnected state
         updateUI(DeviceStatus.DISCONNECTED);
         
-        // Add escape key handler to stop calibration
+        // Add escape key handler to stop calibration or tracking
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && tracker.getStatus() === DeviceStatus.CALIBRATING) {
-                tracker.stopCalibration();
-                // Hide calibration canvas immediately
-                document.getElementById('calibrationCanvas').style.display = 'none';
-                // Exit fullscreen if in fullscreen mode
-                if (document.fullscreenElement) {
-                    document.exitFullscreen().catch(err => {
-                        console.warn('Failed to exit fullscreen:', err);
-                    });
+            if (e.key === 'Escape') {
+                const status = tracker.getStatus();
+                
+                if (status === DeviceStatus.CALIBRATING) {
+                    tracker.stopCalibration();
+                    // Hide calibration canvas immediately
+                    document.getElementById('calibrationCanvas').style.display = 'none';
+                    // Exit fullscreen if in fullscreen mode
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen().catch(err => {
+                            console.warn('Failed to exit fullscreen:', err);
+                        });
+                    }
+                } else if (status === DeviceStatus.TRACKING) {
+                    tracker.stopTracking();
+                    
+                    // Hide fullscreen tracking canvas
+                    document.getElementById('fullscreenTrackingCanvas').style.display = 'none';
+                    
+                    // Exit fullscreen
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen().catch(err => {
+                            console.warn('Failed to exit fullscreen:', err);
+                        });
+                    }
                 }
             }
         });
@@ -612,17 +673,13 @@
         
         // Resize canvases to match window
         function resizeCanvases() {
-            const main = document.querySelector('.main');
-            const width = main.offsetWidth;
-            const height = main.offsetHeight;
-            
-            // Tracking canvas uses container size
-            document.getElementById('trackingCanvas').width = width;
-            document.getElementById('trackingCanvas').height = height;
-            
             // Calibration canvas uses full viewport
             document.getElementById('calibrationCanvas').width = window.innerWidth;
             document.getElementById('calibrationCanvas').height = window.innerHeight;
+            
+            // Fullscreen tracking canvas uses full viewport
+            document.getElementById('fullscreenTrackingCanvas').width = window.innerWidth;
+            document.getElementById('fullscreenTrackingCanvas').height = window.innerHeight;
         }
         
         window.addEventListener('resize', resizeCanvases);

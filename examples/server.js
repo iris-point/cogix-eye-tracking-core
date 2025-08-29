@@ -7,8 +7,10 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 const PORT = 8080;
+const HOST = '0.0.0.0'; // Listen on all network interfaces
 
 const mimeTypes = {
     '.html': 'text/html',
@@ -58,16 +60,51 @@ const server = http.createServer((req, res) => {
     });
 });
 
-server.listen(PORT, () => {
+// Function to get local IP addresses
+function getLocalIPs() {
+    const interfaces = os.networkInterfaces();
+    const addresses = [];
+    
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            // Skip internal (loopback) and non-IPv4 addresses
+            if (iface.family === 'IPv4' && !iface.internal) {
+                addresses.push(iface.address);
+            }
+        }
+    }
+    
+    return addresses;
+}
+
+server.listen(PORT, HOST, () => {
+    const localIPs = getLocalIPs();
+    
     console.log(`
 ╔════════════════════════════════════════════════════════╗
 ║  Eye Tracking Demo Server                              ║
 ║                                                        ║
-║  Server running at: http://localhost:${PORT}/           ║
-║  Demo page: http://localhost:${PORT}/demo.html         ║
+║  Server running on port ${PORT}                           ║
 ║                                                        ║
-║  This server does NOT inject WebSocket code,          ║
+║  Access from this computer:                           ║
+║  → http://localhost:${PORT}/demo.html                  ║
+║                                                        ║`);
+    
+    if (localIPs.length > 0) {
+        console.log(`║  Access from other devices on the network:            ║`);
+        localIPs.forEach(ip => {
+            const url = `http://${ip}:${PORT}/demo.html`;
+            const padding = ' '.repeat(Math.max(0, 55 - url.length));
+            console.log(`║  → ${url}${padding}║`);
+        });
+        console.log(`║                                                        ║`);
+    }
+    
+    console.log(`║  This server does NOT inject WebSocket code,          ║
 ║  so it won't interfere with eye tracker connection.   ║
+║                                                        ║
+║  Note: Make sure your firewall allows port ${PORT}       ║
+║  for network access from other devices.               ║
 ║                                                        ║
 ║  Press Ctrl+C to stop the server                      ║
 ╚════════════════════════════════════════════════════════╝
