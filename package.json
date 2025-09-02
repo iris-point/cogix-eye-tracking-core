@@ -8,8 +8,37 @@
   "types": "dist/index.d.ts",
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "jspsych-plugin",
+    "jspsych-extension"
   ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./jspsych-plugin": {
+      "import": "./dist/cogix-eye-tracking-jspsych-plugin.js",
+      "require": "./dist/cogix-eye-tracking-jspsych-plugin.js"
+    },
+    "./jspsych-extension": {
+      "import": "./dist/jsPsychExtensionCogixEyeTracking.js",
+      "require": "./dist/jsPsychExtensionCogixEyeTracking.js"
+    },
+    "./jspsych-plugin/init-camera": {
+      "import": "./dist/plugin-cogix-init-camera.js",
+      "require": "./dist/plugin-cogix-init-camera.js"
+    },
+    "./jspsych-plugin/calibrate": {
+      "import": "./dist/plugin-cogix-calibrate.js",
+      "require": "./dist/plugin-cogix-calibrate.js"
+    },
+    "./jspsych-plugin/validate": {
+      "import": "./dist/plugin-cogix-validate.js",
+      "require": "./dist/plugin-cogix-validate.js"
+    }
+  },
   "scripts": {
     "build": "npm run clean && npm run build:esm && npm run build:cjs && npm run build:umd && npm run build:types",
     "build:esm": "esbuild src/index.ts --bundle --format=esm --outfile=dist/index.esm.js --sourcemap",

@@ -27,11 +27,15 @@ const mimeTypes = {
 const server = http.createServer((req, res) => {
     console.log(`Request for ${req.url}`);
     
-    // Default to demo.html if root is requested
-    let filePath = req.url === '/' ? '/demo.html' : req.url;
+    // Default to index.html if root is requested
+    let filePath = req.url === '/' ? '/index.html' : req.url;
     
-    // Handle paths - serve from examples folder or dist folder
+    // Handle paths - serve from examples folder, dist folder, jspsych-plugin folder, or jspsych-extension folder
     if (filePath.startsWith('/dist/')) {
+        filePath = path.join(__dirname, '..', filePath);
+    } else if (filePath.startsWith('/jspsych-plugin/')) {
+        filePath = path.join(__dirname, '..', filePath);
+    } else if (filePath.startsWith('/jspsych-extension/')) {
         filePath = path.join(__dirname, '..', filePath);
     } else {
         filePath = path.join(__dirname, filePath);
@@ -86,16 +90,19 @@ server.listen(PORT, HOST, () => {
 ║                                                        ║
 ║  Server running on port ${PORT}                           ║
 ║                                                        ║
-║  Access from this computer:                           ║
+║  Access demos from this computer:                     ║
+║  → http://localhost:${PORT}/                           ║
+║                                                        ║
+║  Direct links:                                        ║
 ║  → http://localhost:${PORT}/demo.html                  ║
+║  → http://localhost:${PORT}/jspsych-experiment.html    ║
+║  → http://localhost:${PORT}/status-check.html          ║
 ║                                                        ║`);
     
     if (localIPs.length > 0) {
         console.log(`║  Access from other devices on the network:            ║`);
         localIPs.forEach(ip => {
-            const url = `http://${ip}:${PORT}/demo.html`;
-            const padding = ' '.repeat(Math.max(0, 55 - url.length));
-            console.log(`║  → ${url}${padding}║`);
+            console.log(`║  → http://${ip}:${PORT}/                               ║`);
         });
         console.log(`║                                                        ║`);
     }

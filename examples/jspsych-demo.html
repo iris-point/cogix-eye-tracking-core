@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>jsPsych Eye Tracking Demo</title>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        
+        /* jsPsych styles */
+        .jspsych-display-element {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        
+        .jspsych-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
+        .jspsych-btn:hover {
+            background-color: #45a049;
+        }
+        
+        /* Eye tracking status */
+        #status-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+        }
+        
+        #status-indicator.show {
+            display: flex;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #888;
+        }
+        
+        .status-dot.connected { background: #4CAF50; }
+        .status-dot.calibrated { background: #2196F3; }
+        .status-dot.tracking { 
+            background: #ff4444; 
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Trial stimulus styles */
+        .stimulus-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .stimulus-image {
+            max-width: 80%;
+            max-height: 80%;
+            object-fit: contain;
+        }
+        
+        .fixation {
+            font-size: 60px;
+            font-weight: bold;
+        }
+        
+        /* Data display */
+        .data-display {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Status indicator -->
+    <div id="status-indicator">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">Not connected</span>
+    </div>
+
+    <!-- Load jsPsych -->
+    <script src="https://unpkg.com/jspsych@8.0.2"></script>
+    
+    <!-- Load jsPsych plugins -->
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@2.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-image-keyboard-response@2.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-preload@2.0.0"></script>
+    
+    <!-- Load Eye Tracking SDK -->
+    <script src="/dist/cogix-eye-tracking-core.js"></script>
+    
+    <!-- Load Eye Tracking Extension -->
+    <script src="/jspsych-extension/jsPsychExtensionCogixEyeTracking.js"></script>
+    
+    <!-- Load Eye Tracking Plugins -->
+    <script src="/jspsych-plugin/plugin-cogix-init-camera.js"></script>
+    <script src="/jspsych-plugin/plugin-cogix-calibrate.js"></script>
+    
+    <script>
+        // Use online images for the demo (emotional/neutral images from public sources)
+        const DEMO_IMAGES = [
+            'https://images.unsplash.com/photo-1535268647677-300dbf3d78d1?w=800&h=600&fit=crop',  // Nature scene (neutral/positive)
+            'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&h=600&fit=crop',  // Puppies (positive emotion)
+            'https://images.unsplash.com/photo-1504208434309-cb69f4fe52b0?w=800&h=600&fit=crop',  // Person (neutral)
+            'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&h=600&fit=crop',  // Landscape (calming)
+            'https://images.unsplash.com/photo-1444927714506-8492d94b4e3d?w=800&h=600&fit=crop'   // Ocean (neutral/calming)
+        ];
+        
+        // Initialize jsPsych with eye tracking extension
+        const jsPsych = initJsPsych({
+            extensions: [
+                {
+                    type: jsPsychExtensionCogixEyeTracking,
+                    params: {
+                        ws_url: 'ws://127.0.0.1:9000',
+                        auto_initialize: false,
+                        show_status: true,
+                        round_predictions: true,
+                        round_precision: 1
+                    }
+                }
+            ],
+            on_finish: function() {
+                // Display the collected data
+                const data = jsPsych.data.get();
+                
+                // Extract eye tracking trials
+                const eyeTrackingTrials = data.filter({
+                    task: 'image-viewing'
+                }).values();
+                
+                // Create summary
+                let summary = '<h2>Experiment Complete!</h2>';
+                summary += '<h3>Eye Tracking Data Summary:</h3>';
+                summary += '<ul>';
+                
+                eyeTrackingTrials.forEach((trial, index) => {
+                    const gazeData = trial.eye_tracking_data || [];
+                    summary += `<li><strong>${trial.image}</strong>: ${gazeData.length} gaze samples`;
+                    if (gazeData.length > 0) {
+                        summary += ` (${trial.sampling_rate || 'N/A'})`;
+                    }
+                    summary += '</li>';
+                });
+                
+                summary += '</ul>';
+                
+                // Show data
+                document.body.innerHTML = `
+                    <div style="padding: 40px; max-width: 1200px; margin: 0 auto;">
+                        ${summary}
+                        <h3>Full Data:</h3>
+                        <div class="data-display">
+                            <pre>${JSON.stringify(eyeTrackingTrials, null, 2)}</pre>
+                        </div>
+                        <button onclick="downloadData()" class="jspsych-btn" style="margin-top: 20px;">
+                            Download Data (JSON)
+                        </button>
+                    </div>
+                `;
+                
+                // Make download function available
+                window.downloadData = function() {
+                    const dataStr = JSON.stringify(eyeTrackingTrials, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `eye_tracking_demo_${Date.now()}.json`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                };
+            }
+        });
+        
+        // Build experiment timeline
+        const timeline = [];
+        
+        // 1. Welcome screen
+        timeline.push({
+            type: jsPsychHtmlButtonResponse,
+            stimulus: `
+                <h1>Eye Tracking Demo</h1>
+                <p>This demo tests eye tracking with jsPsych.</p>
+                <p>We'll connect to your eye tracker, calibrate it, and show you 5 images.</p>
+                <p><strong>Make sure your eye tracker is connected and running on port 9000.</strong></p>
+            `,
+            choices: ['Start']
+        });
+        
+        // 2. Initialize eye tracker connection
+        timeline.push({
+            type: jsPsychCogixInitCamera,
+            instructions: `
+                <h2>Step 1: Connect Eye Tracker</h2>
+                <p>Let's connect to your eye tracking device.</p>
+                <p>Make sure:</p>
+                <ul style="text-align: left; display: inline-block;">
+                    <li>Eye tracker is connected via USB</li>
+                    <li>Tracking software is running (port 9000)</li>
+                    <li>You're seated comfortably at ~60cm from screen</li>
+                </ul>
+            `,
+            button_text: 'Connect',
+            init_camera: true,
+            show_camera_preview: true,  // Show camera preview
+            auto_advance: false,  // Let user click Continue when ready
+            allow_retry: true,
+            allow_skip: false
+        });
+        
+        // 3. Calibrate eye tracker
+        timeline.push({
+            type: jsPsychCogixCalibrate,
+            instructions: `
+                <h2>Step 2: Calibration</h2>
+                <p>Now we need to calibrate the eye tracker to your eyes.</p>
+                <p>You will see dots appear on the screen.</p>
+                <p><strong>Look at each dot until it disappears.</strong></p>
+                <p>Keep your head still during calibration.</p>
+            `,
+            button_text: 'Start Calibration',
+            point_duration: 2000,
+            point_size: 20,
+            point_color: '#4CAF50',
+            background_color: '#252A3D',
+            show_feedback: true,
+            allow_recalibrate: true,
+            allow_skip: false,
+            start_tracking_after: true,
+            auto_advance: true,
+            advance_delay: 2000
+        });
+        
+        // 4. Instructions for image viewing
+        timeline.push({
+            type: jsPsychHtmlButtonResponse,
+            stimulus: `
+                <h2>Step 3: Image Viewing</h2>
+                <p>Great! The eye tracker is now calibrated.</p>
+                <p>You will see 5 images, each displayed for 5 seconds.</p>
+                <p>Simply look at the images naturally.</p>
+                <p>We'll record your eye movements to verify the tracking is working.</p>
+            `,
+            choices: ['Begin']
+        });
+        
+        // 5. Preload images
+        timeline.push({
+            type: jsPsychPreload,
+            images: DEMO_IMAGES,
+            show_progress_bar: true,
+            message: 'Loading images...'
+        });
+        
+        // 6. Image viewing trials with eye tracking
+        const imageNames = ['Nature', 'Puppies', 'Person', 'Landscape', 'Ocean'];
+        
+        DEMO_IMAGES.forEach((imageUrl, index) => {
+            // Fixation cross
+            timeline.push({
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: '<div class="fixation">+</div>',
+                choices: 'NO_KEYS',
+                trial_duration: 1000,
+                data: {
+                    task: 'fixation',
+                    trial_number: index + 1
+                }
+            });
+            
+            // Image presentation with eye tracking
+            timeline.push({
+                type: jsPsychImageKeyboardResponse,
+                stimulus: imageUrl,
+                choices: 'NO_KEYS',
+                trial_duration: 5000,
+                stimulus_width: null,
+                stimulus_height: null,
+                maintain_aspect_ratio: true,
+                data: {
+                    task: 'image-viewing',
+                    trial_number: index + 1,
+                    image: imageNames[index]
+                },
+                on_start: function(trial) {
+                    // Record start timestamp for alignment
+                    trial.data.image_onset = performance.now();
+                    
+                    // Get eye tracking extension
+                    const eyeTracker = jsPsych.extensions['cogix-eye-tracking'];
+                    
+                    if (eyeTracker && eyeTracker.tracking) {
+                        // Start recording for this trial
+                        eyeTracker.startRecording();
+                    }
+                },
+                on_finish: function(data) {
+                    // Record end timestamp
+                    data.image_offset = performance.now();
+                    data.actual_duration = data.image_offset - data.image_onset;
+                    
+                    // Get eye tracking extension
+                    const eyeTracker = jsPsych.extensions['cogix-eye-tracking'];
+                    
+                    if (eyeTracker) {
+                        // Stop recording and get data
+                        eyeTracker.stopRecording();
+                        
+                        // Get the collected data for this trial
+                        const trialData = eyeTracker.currentTrialData || [];
+                        
+                        // Store eye tracking data
+                        data.eye_tracking_data = trialData;
+                        data.gaze_samples_count = trialData.length;
+                        
+                        // Calculate sampling rate
+                        if (trialData.length > 0 && data.actual_duration > 0) {
+                            data.sampling_rate = (trialData.length / (data.actual_duration / 1000)).toFixed(2) + ' Hz';
+                        }
+                        
+                        // Clear trial data for next trial
+                        eyeTracker.currentTrialData = [];
+                    }
+                    
+                    console.log(`Trial ${data.trial_number}: ${data.gaze_samples_count} samples collected`);
+                }
+            });
+            
+            // Brief blank screen between trials
+            timeline.push({
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: '',
+                choices: 'NO_KEYS',
+                trial_duration: 500,
+                data: {
+                    task: 'blank',
+                    trial_number: index + 1
+                }
+            });
+        });
+        
+        // 7. End screen
+        timeline.push({
+            type: jsPsychHtmlButtonResponse,
+            stimulus: `
+                <h2>Demo Complete!</h2>
+                <p>Eye tracking test finished.</p>
+            `,
+            choices: ['View Data']
+        });
+        
+        // Run the experiment
+        jsPsych.run(timeline);
+        
+        // Update status indicator
+        function updateStatus() {
+            const eyeTracker = jsPsych?.extensions?.['cogix-eye-tracking'];
+            const indicator = document.getElementById('status-indicator');
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            
+            if (!eyeTracker || !indicator) return;
+            
+            indicator.classList.add('show');
+            
+            if (eyeTracker.tracking) {
+                dot.className = 'status-dot tracking';
+                text.textContent = 'Tracking';
+            } else if (eyeTracker.calibrated) {
+                dot.className = 'status-dot calibrated';
+                text.textContent = 'Calibrated';
+            } else if (eyeTracker.initialized) {
+                dot.className = 'status-dot connected';
+                text.textContent = 'Connected';
+            } else {
+                dot.className = 'status-dot';
+                text.textContent = 'Not connected';
+            }
+        }
+        
+        // Update status periodically
+        setInterval(updateStatus, 500);
+    </script>
+</body>
+</html>
