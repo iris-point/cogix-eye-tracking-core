@@ -36,7 +36,8 @@
     }
   },
   "scripts": {
-    "build": "npm run clean && npm run build:esm && npm run build:cjs && npm run build:umd && npm run build:types",
+    "build": "npm run clean && npm run build:esm && npm run build:cjs && npm run build:umd && npm run build:types && npm run build:plugins",
+    "build:plugins": "node build-plugins.js",
     "build:esm": "esbuild src/index.ts --bundle --format=esm --outfile=dist/index.esm.js --sourcemap",
     "build:cjs": "esbuild src/index.ts --bundle --format=cjs --outfile=dist/index.js --sourcemap",
     "build:umd": "npm run build:umd:dev && npm run build:umd:prod",

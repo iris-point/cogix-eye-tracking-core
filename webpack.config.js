@@ -1,4 +1,6 @@
 const path = require('path');
+const TerserPlugin = require('terser-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
@@ -52,74 +54,68 @@ module.exports = (env, argv) => {
       },
       devtool: isProduction ? 'source-map' : 'inline-source-map'
     },
-    // Cogix init camera plugin
+    // Copy and minify plugin/extension files directly (they're already IIFE format)
     {
-      entry: './jspsych-plugin/plugin-cogix-init-camera.js',
+      entry: './src/dummy.js', // Dummy entry since we're just copying
       output: {
         path: path.resolve(__dirname, 'dist'),
-        filename: isProduction ? 'plugin-cogix-init-camera.min.js' : 'plugin-cogix-init-camera.js',
-        library: 'jsPsychCogixInitCamera',
-        libraryTarget: 'umd',
-        globalObject: 'this'
+        filename: 'dummy.js' // Will be deleted
       },
-      module: {
-        rules: [
-          {
-            test: /\.js$/,
-            exclude: /node_modules/
-          }
-        ]
-      },
-      resolve: {
-        extensions: ['.js']
-      },
-      devtool: isProduction ? 'source-map' : 'inline-source-map'
-    },
-    // Cogix calibrate plugin
-    {
-      entry: './jspsych-plugin/plugin-cogix-calibrate.js',
-      output: {
-        path: path.resolve(__dirname, 'dist'),
-        filename: isProduction ? 'plugin-cogix-calibrate.min.js' : 'plugin-cogix-calibrate.js',
-        library: 'jsPsychCogixCalibrate',
-        libraryTarget: 'umd',
-        globalObject: 'this'
-      },
-      module: {
-        rules: [
-          {
-            test: /\.js$/,
-            exclude: /node_modules/
-          }
-        ]
-      },
-      resolve: {
-        extensions: ['.js']
-      },
-      devtool: isProduction ? 'source-map' : 'inline-source-map'
-    },
-    // Cogix validate plugin
-    {
-      entry: './jspsych-plugin/plugin-cogix-validate.js',
-      output: {
-        path: path.resolve(__dirname, 'dist'),
-        filename: isProduction ? 'plugin-cogix-validate.min.js' : 'plugin-cogix-validate.js',
-        library: 'jsPsychCogixValidate',
-        libraryTarget: 'umd',
-        globalObject: 'this'
-      },
-      module: {
-        rules: [
-          {
-            test: /\.js$/,
-            exclude: /node_modules/
-          }
-        ]
-      },
-      resolve: {
-        extensions: ['.js']
-      },
-      devtool: isProduction ? 'source-map' : 'inline-source-map'
+      plugins: [
+        new CopyWebpackPlugin({
+          patterns: [
+            // Copy and optionally minify plugin files
+            {
+              from: 'jspsych-plugin/plugin-cogix-init-camera.js',
+              to: isProduction ? 'plugin-cogix-init-camera.min.js' : 'plugin-cogix-init-camera.js',
+              transform: isProduction ? undefined : (content) => content,
+              transformPath: (targetPath) => targetPath
+            },
+            {
+              from: 'jspsych-plugin/plugin-cogix-calibrate.js',
+              to: isProduction ? 'plugin-cogix-calibrate.min.js' : 'plugin-cogix-calibrate.js',
+              transform: isProduction ? undefined : (content) => content,
+              transformPath: (targetPath) => targetPath
+            },
+            {
+              from: 'jspsych-plugin/plugin-cogix-validate.js',
+              to: isProduction ? 'plugin-cogix-validate.min.js' : 'plugin-cogix-validate.js',
+              transform: isProduction ? undefined : (content) => content,
+              transformPath: (targetPath) => targetPath
+            },
+            // Also copy non-minified versions in production
+            ...(isProduction ? [
+              {
+                from: 'jspsych-plugin/plugin-cogix-init-camera.js',
+                to: 'plugin-cogix-init-camera.js'
+              },
+              {
+                from: 'jspsych-plugin/plugin-cogix-calibrate.js',
+                to: 'plugin-cogix-calibrate.js'
+              },
+              {
+                from: 'jspsych-plugin/plugin-cogix-validate.js',
+                to: 'plugin-cogix-validate.js'
+              }
+            ] : [])
+          ]
+        })
+      ],
+      optimization: {
+        minimize: isProduction,
+        minimizer: isProduction ? [
+          new TerserPlugin({
+            test: /\.min\.js$/,
+            terserOptions: {
+              compress: true,
+              mangle: true,
+              format: {
+                comments: false
+              }
+            }
+          })
+        ] : []
+      }
     }
   ];
 };
