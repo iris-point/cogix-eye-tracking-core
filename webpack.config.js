@@ -29,29 +29,6 @@ module.exports = (env, argv) => {
       },
       devtool: isProduction ? 'source-map' : 'inline-source-map'
     },
-    // jsPsych plugin bundle
-    {
-      entry: './jspsych-plugin/cogix-eye-tracking-jspsych-plugin.js',
-      output: {
-        path: path.resolve(__dirname, 'dist'),
-        filename: isProduction ? 'cogix-eye-tracking-jspsych-plugin.min.js' : 'cogix-eye-tracking-jspsych-plugin.js',
-        library: 'jsPsychEyeTracking',
-        libraryTarget: 'umd',
-        globalObject: 'this'
-      },
-      module: {
-        rules: [
-          {
-            test: /\.js$/,
-            exclude: /node_modules/
-          }
-        ]
-      },
-      resolve: {
-        extensions: ['.js']
-      },
-      devtool: isProduction ? 'source-map' : 'inline-source-map'
-    },
     // jsPsych extension bundle
     {
       entry: './jspsych-extension/jsPsychExtensionCogixEyeTracking.js',
