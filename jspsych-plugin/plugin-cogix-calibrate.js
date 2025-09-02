@@ -13,17 +13,63 @@ var jsPsychCogixCalibrate = (function () {
   class CogixCalibratePlugin {
     constructor(jsPsych) {
       this.jsPsych = jsPsych;
+      
+      // Language support
+      this.translations = {
+        en: {
+          notInitialized: 'Eye tracker not initialized',
+          calibrationSuccess: '✓ Calibration Successful!',
+          accuracy: 'Accuracy: {percent}%',
+          calibrationComplete: 'The eye tracker has been calibrated to your eyes.',
+          keepPosition: 'Please try to keep your head in the same position during the experiment.',
+          continueButton: 'Continue',
+          recalibrateButton: 'Recalibrate',
+          calibrationFailed: '✗ Calibration Failed',
+          tryAgain: 'Please try again',
+          retryButton: 'Retry Calibration',
+          skipButton: 'Skip Calibration',
+          defaultButtonText: 'Start Calibration'
+        },
+        zh: {
+          notInitialized: '眼动仪未初始化',
+          calibrationSuccess: '✓ 校准成功！',
+          accuracy: '精度：{percent}%',
+          calibrationComplete: '眼动仪已根据您的眼睛完成校准。',
+          keepPosition: '请在实验过程中保持头部位置不变。',
+          continueButton: '继续',
+          recalibrateButton: '重新校准',
+          calibrationFailed: '✗ 校准失败',
+          tryAgain: '请重试',
+          retryButton: '重新校准',
+          skipButton: '跳过校准',
+          defaultButtonText: '开始校准'
+        }
+      };
+    }
+    
+    getTranslation(key, lang, replacements = {}) {
+      const language = lang || 'zh';
+      let text = this.translations[language]?.[key] || this.translations.en[key] || key;
+      
+      // Replace placeholders
+      Object.keys(replacements).forEach(placeholder => {
+        text = text.replace(`{${placeholder}}`, replacements[placeholder]);
+      });
+      
+      return text;
     }
 
     trial(display_element, trial) {
       // Get the extension
       const extension = this.jsPsych.extensions['cogix-eye-tracking'];
+      const lang = trial.language || 'en';
       
       if (!extension || !extension.initialized) {
-        console.error('Cogix eye tracker not initialized');
+        const errorMsg = this.getTranslation('notInitialized', lang);
+        console.error(errorMsg);
         this.jsPsych.finishTrial({
           success: false,
-          error: 'Eye tracker not initialized'
+          error: errorMsg
         });
         return;
       }
@@ -43,25 +89,26 @@ var jsPsychCogixCalibrate = (function () {
       
       // Show instructions if provided
       if (trial.instructions) {
+        const buttonText = trial.button_text || this.getTranslation('defaultButtonText', lang);
         display_element.innerHTML = `
           <div id="calibration-container" style="text-align: center; padding: 40px;">
             <div>${trial.instructions}</div>
             <button id="start-calibration" class="jspsych-btn" style="margin-top: 30px; padding: 15px 30px; font-size: 16px;">
-              ${trial.button_text}
+              ${buttonText}
             </button>
           </div>
         `;
         
         document.getElementById('start-calibration').addEventListener('click', () => {
-          this.startCalibration(display_element, trial, extension, calibrationPoints, startTime);
+          this.startCalibration(display_element, trial, extension, calibrationPoints, startTime, lang);
         });
       } else {
         // Start calibration immediately
-        this.startCalibration(display_element, trial, extension, calibrationPoints, startTime);
+        this.startCalibration(display_element, trial, extension, calibrationPoints, startTime, lang);
       }
     }
 
-    async startCalibration(display_element, trial, extension, points, startTime) {
+    async startCalibration(display_element, trial, extension, points, startTime, lang) {
       // Clear display
       display_element.innerHTML = '';
       
@@ -81,16 +128,16 @@ var jsPsychCogixCalibrate = (function () {
         // Show success message
         display_element.innerHTML = `
           <div style="text-align: center; padding: 40px;">
-            <h2 style="color: green;">✓ Calibration Successful!</h2>
-            <p>Accuracy: ${(result.accuracy * 100).toFixed(1)}%</p>
+            <h2 style="color: green;">${this.getTranslation('calibrationSuccess', lang)}</h2>
+            <p>${this.getTranslation('accuracy', lang, { percent: (result.accuracy * 100).toFixed(1) })}</p>
             ${trial.show_feedback ? `
               <div style="margin: 20px auto; max-width: 500px;">
-                <p>The eye tracker has been calibrated to your eyes.</p>
-                <p>Please try to keep your head in the same position during the experiment.</p>
+                <p>${this.getTranslation('calibrationComplete', lang)}</p>
+                <p>${this.getTranslation('keepPosition', lang)}</p>
               </div>
             ` : ''}
             <button id="continue-button" class="jspsych-btn" style="margin-top: 20px; padding: 15px 30px;">
-              Continue
+              ${this.getTranslation('continueButton', lang)}
             </button>
           </div>
         `;
@@ -117,16 +164,16 @@ var jsPsychCogixCalibrate = (function () {
         // Show error message
         display_element.innerHTML = `
           <div style="text-align: center; padding: 40px;">
-            <h2 style="color: red;">✗ Calibration Failed</h2>
+            <h2 style="color: red;">${this.getTranslation('calibrationFailed', lang)}</h2>
             <p>${error.message}</p>
             ${trial.allow_recalibrate ? `
               <button id="retry-button" class="jspsych-btn" style="margin: 20px; padding: 15px 30px;">
-                Try Again
+                ${this.getTranslation('retryButton', lang)}
               </button>
             ` : ''}
             ${trial.allow_skip ? `
               <button id="skip-button" class="jspsych-btn" style="margin: 20px; padding: 15px 30px;">
-                Skip Calibration
+                ${this.getTranslation('skipButton', lang)}
               </button>
             ` : ''}
           </div>
@@ -134,7 +181,7 @@ var jsPsychCogixCalibrate = (function () {
         
         if (trial.allow_recalibrate) {
           document.getElementById('retry-button').addEventListener('click', () => {
-            this.startCalibration(display_element, trial, extension, points, startTime);
+            this.startCalibration(display_element, trial, extension, points, startTime, lang);
           });
         }
         
@@ -186,7 +233,12 @@ var jsPsychCogixCalibrate = (function () {
       /** Button text to start calibration */
       button_text: {
         type: 'STRING',
-        default: "Start Calibration"
+        default: null
+      },
+      /** Language for UI text ('en' or 'zh') */
+      language: {
+        type: 'STRING',
+        default: 'zh'
       },
       /** Calibration points as percentage coordinates */
       calibration_points: {

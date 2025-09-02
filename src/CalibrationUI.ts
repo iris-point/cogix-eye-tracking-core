@@ -274,12 +274,15 @@ export class CalibrationUI {
       }
     }
 
-    // Exit fullscreen if we entered it
+    // Don't exit fullscreen - let the experiment control fullscreen mode
+    // This was causing issues with experiments that want to stay in fullscreen
+    /*
     if (this.config.autoFullscreen && document.fullscreenElement) {
       document.exitFullscreen().catch(err => {
         console.warn('Failed to exit fullscreen:', err)
       })
     }
+    */
   }
 
   /**

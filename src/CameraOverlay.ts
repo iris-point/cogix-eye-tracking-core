@@ -213,7 +213,7 @@ export class CameraOverlay {
   private setupEventListeners(): void {
     // Listen for camera frames
     this.tracker.on('cameraFrame', (data) => {
-      console.log('[CameraOverlay] cameraFrame event received in setupEventListeners')
+      
       
       // Make sure overlay is initialized before updating frame
       if (!this.overlayElement) {

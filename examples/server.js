@@ -9,7 +9,10 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const PORT = 8080;
+// Check for command line arguments
+const args = process.argv.slice(2);
+const mainPage = args.find(arg => arg.startsWith('--main='))?.split('=')[1];
+const PORT = args.find(arg => arg.startsWith('--port='))?.split('=')[1] || 3000;
 const HOST = '0.0.0.0'; // Listen on all network interfaces
 
 const mimeTypes = {
@@ -18,7 +21,9 @@ const mimeTypes = {
     '.css': 'text/css',
     '.json': 'application/json',
     '.png': 'image/png',
-    '.jpg': 'image/jpg',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.JPG': 'image/jpeg',  // Handle uppercase
     '.gif': 'image/gif',
     '.svg': 'image/svg+xml',
     '.ico': 'image/x-icon'
@@ -27,18 +32,51 @@ const mimeTypes = {
 const server = http.createServer((req, res) => {
     console.log(`Request for ${req.url}`);
     
-    // Default to index.html if root is requested
-    let filePath = req.url === '/' ? '/index.html' : req.url;
+    // Decode URL to handle Chinese characters and spaces
+    let filePath = decodeURIComponent(req.url);
     
-    // Handle paths - serve from examples folder, dist folder, jspsych-plugin folder, or jspsych-extension folder
-    if (filePath.startsWith('/dist/')) {
-        filePath = path.join(__dirname, '..', filePath);
-    } else if (filePath.startsWith('/jspsych-plugin/')) {
-        filePath = path.join(__dirname, '..', filePath);
-    } else if (filePath.startsWith('/jspsych-extension/')) {
-        filePath = path.join(__dirname, '..', filePath);
+    // Default to index.html or emotion experiment if specified
+    if (filePath === '/') {
+        if (mainPage === 'emotion-experiment') {
+            // Serve the emotion experiment index.html directly
+            filePath = '/index.html';
+        } else {
+            filePath = '/index.html';
+        }
+    }
+    
+    // Handle paths - serve from various folders
+    if (mainPage === 'emotion-experiment') {
+        // When serving emotion experiment, handle special paths
+        if (filePath.startsWith('/dist/')) {
+            filePath = path.join(__dirname, '..', filePath);
+        } else if (filePath.startsWith('/jspsych-plugin/')) {
+            filePath = path.join(__dirname, '..', filePath);
+        } else if (filePath.startsWith('/jspsych-extension/')) {
+            filePath = path.join(__dirname, '..', filePath);
+        } else {
+            // Everything else comes from the emotion experiment folder
+            filePath = path.join(__dirname, '..', 'eye-tracking-emotion-experiment', filePath);
+        }
     } else {
-        filePath = path.join(__dirname, filePath);
+        // Normal demo server mode
+        if (filePath.startsWith('/dist/')) {
+            filePath = path.join(__dirname, '..', filePath);
+        } else if (filePath.startsWith('/jspsych-plugin/')) {
+            filePath = path.join(__dirname, '..', filePath);
+        } else if (filePath.startsWith('/jspsych-extension/')) {
+            filePath = path.join(__dirname, '..', filePath);
+        } else if (filePath === '/emotion-experiment.html' || filePath.startsWith('/assets/')) {
+            // Serve emotion experiment files from the submodule
+            if (filePath === '/emotion-experiment.html') {
+                filePath = path.join(__dirname, '..', 'eye-tracking-emotion-experiment', 'index.html');
+            } else if (filePath.startsWith('/assets/')) {
+                // Serve assets from emotion experiment folder
+                filePath = path.join(__dirname, '..', 'eye-tracking-emotion-experiment', filePath);
+            }
+        } else {
+            filePath = path.join(__dirname, filePath);
+        }
     }
     
     const extname = path.extname(filePath).toLowerCase();
@@ -84,20 +122,27 @@ function getLocalIPs() {
 server.listen(PORT, HOST, () => {
     const localIPs = getLocalIPs();
     
+    const displayPage = mainPage === 'emotion-experiment' ? 'Emotion Regulation Experiment' : 'Eye Tracking Demos';
+    
     console.log(`
 ╔════════════════════════════════════════════════════════╗
 ║  Eye Tracking Demo Server                              ║
+║  ${displayPage.padEnd(54)} ║
 ║                                                        ║
 ║  Server running on port ${PORT}                           ║
 ║                                                        ║
-║  Access demos from this computer:                     ║
-║  → http://localhost:${PORT}/                           ║
-║                                                        ║
-║  Direct links:                                        ║
+║  Access from this computer:                           ║
+║  → http://localhost:${PORT}/                                ║
+║                                                        ║`);
+    
+    if (mainPage !== 'emotion-experiment') {
+        console.log(`║  Available demos:                                     ║
 ║  → http://localhost:${PORT}/demo.html                  ║
 ║  → http://localhost:${PORT}/jspsych-experiment.html    ║
-║  → http://localhost:${PORT}/status-check.html          ║
+║  → http://localhost:${PORT}/jspsych-demo.html          ║
+║  → http://localhost:${PORT}/emotion-experiment.html    ║
 ║                                                        ║`);
+    }
     
     if (localIPs.length > 0) {
         console.log(`║  Access from other devices on the network:            ║`);

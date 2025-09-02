@@ -107,27 +107,71 @@ var jsPsychCogixInitCamera = (function () {
           }
           
           // Show success with camera status
+          const lang = trial.language || 'zh';
           if (cameraOverlay || statusPreview) {
-            status.innerHTML = '<span style="color: green;">✓ Connected! Camera preview is shown above.</span>';
+            status.innerHTML = lang === 'zh' ? 
+              '<span style="color: green;">✓ 已连接！等待摄像头数据...</span>' :
+              '<span style="color: green;">✓ Connected! Waiting for camera feed...</span>';
           } else {
-            status.innerHTML = '<span style="color: green;">✓ Connected successfully!</span>';
+            status.innerHTML = lang === 'zh' ?
+              '<span style="color: green;">✓ 连接成功！</span>' :
+              '<span style="color: green;">✓ Connected successfully!</span>';
           }
           
-          // Auto-advance if specified
-          if (trial.auto_advance) {
-            button.textContent = `Continuing in ${Math.floor(trial.advance_delay / 1000)} seconds...`;
+          // Function to enable continue button
+          const enableContinue = () => {
+            status.innerHTML = lang === 'zh' ?
+              '<span style="color: green;">✓ 摄像头就绪！现在可以继续了。</span>' :
+              '<span style="color: green;">✓ Camera ready! You can now continue.</span>';
+            
+            if (trial.auto_advance) {
+              button.textContent = `Continuing in ${Math.floor(trial.advance_delay / 1000)} seconds...`;
+              button.disabled = true;
+              setTimeout(() => {
+                this.endTrial(true, performance.now() - startTime, null, cameraOverlay, statusPreview);
+              }, trial.advance_delay);
+            } else {
+              // Manual continue - this is now the default
+              button.textContent = lang === 'zh' ? '继续' : 'Continue';
+              button.disabled = false;
+              button.style.background = '#4CAF50';
+              button.addEventListener('click', () => {
+                this.endTrial(true, performance.now() - startTime, null, cameraOverlay, statusPreview);
+              }, { once: true });
+            }
+          };
+          
+          // Wait for first camera frame if camera preview is showing
+          if (cameraOverlay || statusPreview) {
+            button.textContent = lang === 'zh' ? '等待摄像头...' : 'Waiting for camera...';
             button.disabled = true;
+            
+            // Check for camera data
+            let frameCheckInterval = setInterval(() => {
+              // Check if we have received camera data
+              if (extension.tracker && extension.tracker.cameraInitialized) {
+                clearInterval(frameCheckInterval);
+                enableContinue();
+              } else if (extension.dataBuffer && extension.dataBuffer.length > 0) {
+                // Alternative check: if we have any data in buffer
+                clearInterval(frameCheckInterval);
+                enableContinue();
+              }
+            }, 100);
+            
+            // Timeout after 5 seconds if no camera data
             setTimeout(() => {
-              this.endTrial(true, performance.now() - startTime, null, cameraOverlay, statusPreview);
-            }, trial.advance_delay);
+              if (frameCheckInterval) {
+                clearInterval(frameCheckInterval);
+                status.innerHTML = lang === 'zh' ?
+                  '<span style="color: orange;">⚠ 未检测到摄像头数据，但您可以继续。</span>' :
+                  '<span style="color: orange;">⚠ Camera feed not detected, but you can continue.</span>';
+                enableContinue();
+              }
+            }, 5000);
           } else {
-            // Manual continue - this is now the default
-            button.textContent = 'Continue';
-            button.disabled = false;
-            button.style.background = '#4CAF50';
-            button.addEventListener('click', () => {
-              this.endTrial(true, performance.now() - startTime, null, cameraOverlay, statusPreview);
-            }, { once: true });
+            // No camera preview requested, enable continue immediately
+            enableContinue();
           }
           
         } catch (error) {
@@ -233,6 +277,11 @@ var jsPsychCogixInitCamera = (function () {
       allow_skip: {
         type: 'BOOL',
         default: false
+      },
+      /** Language for UI text ('en' or 'zh') */
+      language: {
+        type: 'STRING',
+        default: 'zh'
       }
     },
     data: {

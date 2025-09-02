@@ -20,6 +20,24 @@ class jsPsychExtensionCogixEyeTracking {
     this.initialized = false;
     this.calibrated = false;
     this.tracking = false;
+    
+    // Language support
+    this.translations = {
+      en: {
+        notConnected: 'Not Connected',
+        connected: 'Connected',
+        calibrated: 'Calibrated',
+        tracking: 'Tracking',
+        error: 'Error'
+      },
+      zh: {
+        notConnected: '未连接',
+        connected: '已连接',
+        calibrated: '已校准',
+        tracking: '正在追踪',
+        error: '错误'
+      }
+    };
   }
 
   /**
@@ -34,7 +52,8 @@ class jsPsychExtensionCogixEyeTracking {
       auto_initialize: false,
       show_status: true,
       round_predictions: true,
-      round_precision: 1
+      round_precision: 1,
+      language: 'zh'  // 'en' for English, 'zh' for Chinese (default: Chinese)
     };
     
     this.params = { ...defaults, ...params };
@@ -731,12 +750,15 @@ class jsPsychExtensionCogixEyeTracking {
   updateStatus(status) {
     if (!this.statusIndicator) return;
     
+    const lang = this.params?.language || 'en';
+    const translations = this.translations[lang] || this.translations.en;
+    
     const statusConfig = {
-      disconnected: { color: '#999', text: 'Not Connected' },
-      connected: { color: '#ffa500', text: 'Connected' },
-      calibrated: { color: '#4CAF50', text: 'Calibrated' },
-      tracking: { color: '#00ff00', text: 'Tracking' },
-      error: { color: '#ff0000', text: 'Error' }
+      disconnected: { color: '#999', text: translations.notConnected },
+      connected: { color: '#ffa500', text: translations.connected },
+      calibrated: { color: '#4CAF50', text: translations.calibrated },
+      tracking: { color: '#00ff00', text: translations.tracking },
+      error: { color: '#ff0000', text: translations.error }
     };
     
     const config = statusConfig[status] || statusConfig.disconnected;
