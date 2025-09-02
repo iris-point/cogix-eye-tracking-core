@@ -303,9 +303,13 @@ class jsPsychExtensionCogixEyeTracking {
           document.body.removeChild(calibrationCanvas);
         }
         
+        // Don't exit fullscreen - let the experiment control fullscreen mode
+        // This was causing issues with experiments that want to stay in fullscreen
+        /*
         if (document.fullscreenElement) {
           document.exitFullscreen();
         }
+        */
       };
       
       this.tracker.on('calibrationComplete', completeHandler);
