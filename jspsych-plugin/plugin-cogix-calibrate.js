@@ -125,11 +125,10 @@ var jsPsychCogixCalibrate = (function () {
       try {
         const result = await extension.calibrate(calibrationOptions);
         
-        // Show success message
+        // Show success message (without accuracy display)
         display_element.innerHTML = `
           <div style="text-align: center; padding: 40px;">
             <h2 style="color: green;">${this.getTranslation('calibrationSuccess', lang)}</h2>
-            <p>${this.getTranslation('accuracy', lang, { percent: (result.accuracy * 100).toFixed(1) })}</p>
             ${trial.show_feedback ? `
               <div style="margin: 20px auto; max-width: 500px;">
                 <p>${this.getTranslation('calibrationComplete', lang)}</p>
