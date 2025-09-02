@@ -196,14 +196,7 @@ export class CanvasRenderer {
     this.ctx.fillStyle = this.config.gazePointColor
     this.ctx.fill()
 
-    // Draw confidence ring if available
-    if (gazeData.confidence !== undefined) {
-      this.ctx.beginPath()
-      this.ctx.arc(x, y, this.config.gazePointSize + 5, 0, Math.PI * 2 * gazeData.confidence)
-      this.ctx.strokeStyle = this.config.gazePointColor
-      this.ctx.lineWidth = 2
-      this.ctx.stroke()
-    }
+    // No confidence ring needed - removed
   }
 
   /**
