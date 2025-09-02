@@ -245,13 +245,13 @@ export class CameraOverlay {
    * Update camera frame
    */
   private updateFrame(imageData: string): void {
-    console.log('[CameraOverlay] updateFrame called', {
-      hasImageElement: !!this.imageElement,
-      hasOverlayElement: !!this.overlayElement,
-      isVisible: this.isVisible,
-      imageDataLength: imageData ? imageData.length : 0,
-      imageDataPreview: imageData ? imageData.substring(0, 30) : null
-    })
+    // console.log('[CameraOverlay] updateFrame called', {
+    //   hasImageElement: !!this.imageElement,
+    //   hasOverlayElement: !!this.overlayElement,
+    //   isVisible: this.isVisible,
+    //   imageDataLength: imageData ? imageData.length : 0,
+    //   imageDataPreview: imageData ? imageData.substring(0, 30) : null
+    // })
     
     if (!this.imageElement) {
       console.warn('[CameraOverlay] No image element available')
