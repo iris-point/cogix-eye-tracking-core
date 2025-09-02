@@ -5,9 +5,8 @@
 
 export interface GazeData {
   timestamp: number
-  x: number           // Normalized [0,1]
-  y: number           // Normalized [0,1]
-  confidence?: number
+  x: number           // Raw x from WebSocket
+  y: number           // Raw y from WebSocket
   leftEye?: {
     x: number
     y: number
@@ -16,7 +15,6 @@ export interface GazeData {
     x: number
     y: number
   }
-  rawTrackerOutput?: TrackerOutput
 }
 
 export interface EyeInfo {

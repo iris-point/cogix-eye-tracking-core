@@ -402,11 +402,9 @@ export class EyeTracker extends EventEmitter<EventMap> {
           alleyeRight = alleyeRight / eyeCount
 
           const gazeData: GazeData = {
-            timestamp: Date.now(),
-            x: alleyeLeft,
-            y: alleyeRight,
-            confidence: 0.9,
-            rawTrackerOutput: trakcerOutputData
+            timestamp: performance.now(),  // High-resolution timestamp with microsecond precision
+            x: alleyeLeft,  // Raw x coordinate
+            y: alleyeRight  // Raw y coordinate
           }
 
           if (trakcerOutputData.tLeftScreenPoint) {

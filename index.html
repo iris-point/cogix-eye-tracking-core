@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>情绪调节实验 | Emotion Regulation Experiment</title>
+    
+    <!-- jsPsych CSS -->
+    <link href="https://unpkg.com/jspsych@8.0.2/css/jspsych.css" rel="stylesheet" type="text/css" />
+    
+    <style>
+        body {
+            background-color: #252A3D;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            cursor: auto;
+        }
+        
+        /* Hide cursor when inactive */
+        body.hide-cursor {
+            cursor: none;
+        }
+        
+        body.hide-cursor * {
+            cursor: none !important;
+        }
+        
+        /* Full screen image display - prevent overflow */
+        .jspsych-content {
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .jspsych-image-keyboard-response-stimulus {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            padding: 0;
+            margin: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        .jspsych-image-keyboard-response-stimulus img,
+        .full-screen-image img {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            display: block;
+            margin: 0;
+            padding: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        .jspsych-display-element {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #252A3D;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Ensure content wrapper also uses the same background */
+        .jspsych-content-wrapper {
+            background-color: #252A3D;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            max-width: none;
+        }
+        
+        .jspsych-content {
+            background-color: #252A3D;
+            padding: 0;
+            margin: 0 auto;
+            max-width: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        
+        /* Global button style */
+        .jspsych-btn {
+            background: #4CAF50 !important;
+            color: white !important;
+            border: none !important;
+            padding: 12px 35px !important;
+            font-size: 18px !important;
+            border-radius: 5px !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            font-weight: 500 !important;
+            text-transform: none !important;
+            margin-top: 15px !important;
+        }
+        
+        .jspsych-btn:hover {
+            background: #45a049 !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+        }
+        
+        .jspsych-btn:active {
+            transform: translateY(0) !important;
+        }
+        
+        /* Typography Hierarchy:
+         * Level 1 (96px): Fixation cross
+         * Level 2 (56px): Main instructions, strategies
+         * Level 3 (32px): Questions, secondary instructions
+         * Level 4 (24px): Supporting text
+         * Level 5 (20px): Body text, options
+         */
+        
+        /* Level 1: Fixation cross */
+        .fixation {
+            font-size: 96px;
+            font-weight: bold;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            text-align: center;
+            line-height: 1;
+            font-family: monospace;
+        }
+        
+        /* Level 2: Strategy instruction */
+        .strategy-instruction {
+            font-size: 56px;
+            font-weight: 600;
+            color: white;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        /* Level 2: Text-based instruction styles */
+        .text-instruction {
+            font-size: 56px;
+            font-weight: 600;
+            color: white;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            background-color: #252A3D;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Removed unused flow diagram styles since we're using the actual image */
+        
+        /* Level 4: Supporting text */
+        .instruction-ready {
+            margin-top: 40px;
+            font-size: 24px;
+            color: #aaa;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
+        /* Level 2: Preparation screen */
+        .preparation {
+            font-size: 56px;
+            font-weight: 600;
+            color: white;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        /* Rating scale styling - dark theme */
+        .jspsych-survey-likert-statement {
+            color: white !important;
+            font-weight: 500 !important;
+            margin-bottom: 40px !important;
+        }
+        
+        /* Likert scale container */
+        .jspsych-survey-likert {
+            background-color: #252A3D !important;
+            padding: 40px 20px !important;
+        }
+        
+        .jspsych-survey-likert-opts {
+            list-style: none !important;
+            padding: 15px 0 !important;
+            margin: 0 auto !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: flex-start !important;
+            background-color: #252A3D !important;
+            width: 100% !important;
+            max-width: 600px !important;
+        }
+        
+        /* Remove the horizontal line */
+        .jspsych-survey-likert-opts:before {
+            display: none !important;
+        }
+        
+        /* Each scale option */
+        .jspsych-survey-likert-opts li {
+            flex: 0 0 auto !important;
+            margin: 0 !important;
+            padding: 0 4px !important;
+            list-style: none !important;
+            display: flex !important;
+            justify-content: center !important;
+        }
+        
+        /* Label container */
+        .jspsych-survey-likert-opt-label {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            cursor: pointer !important;
+            color: #ccc !important;
+        }
+        
+        /* Radio button styling */
+        .jspsych-survey-likert-opt-label input[type="radio"] {
+            width: 16px !important;
+            height: 16px !important;
+            margin: 0 0 6px 0 !important;
+            cursor: pointer !important;
+            accent-color: #4CAF50 !important;
+            transform: scale(1) !important;
+        }
+        
+        /* Text below radio button */
+        .jspsych-survey-likert-opt-label span {
+            font-size: 12px !important;
+            text-align: center !important;
+            line-height: 1.2 !important;
+            min-width: 25px !important;
+            color: #ccc !important;
+            display: block !important;
+        }
+        
+        /* Checked state */
+        .jspsych-survey-likert-opt-label input[type="radio"]:checked + span {
+            color: #4CAF50 !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+        }
+        
+        /* Only style radio buttons when hover */
+        .jspsych-survey-likert-opt-label input[type="radio"]:hover {
+            transform: scale(1.2) !important;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+        }
+        
+        /* Make the entire survey container use our background */
+        .jspsych-survey-likert {
+            background-color: #252A3D !important;
+        }
+        
+        .jspsych-survey-likert-preamble {
+            color: white !important;
+            background-color: #252A3D !important;
+        }
+        
+        /* Rest screen */
+        .rest-container {
+            text-align: center;
+            color: white;
+            padding: 50px;
+        }
+        
+        .rest-title {
+            font-size: 48px;
+            margin-bottom: 30px;
+        }
+        
+        .rest-timer {
+            font-size: 72px;
+            font-weight: bold;
+            margin: 30px 0;
+            color: #4CAF50;
+        }
+        
+        .rest-message {
+            font-size: 24px;
+            color: #ccc;
+        }
+        
+        /* Welcome screens - dark theme */
+        .instruction-container {
+            background-color: #252A3D;
+            padding: 30px;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            overflow: hidden;
+            max-width: none;
+        }
+        
+        .instruction-container h1 {
+            color: white;
+            margin-bottom: 25px;
+            font-size: 42px;
+            font-weight: 600;
+        }
+        
+        .instruction-container h2 {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 32px;
+            font-weight: 600;
+        }
+        
+        .instruction-container p {
+            font-size: 20px;
+            color: #ccc;
+            margin: 12px 0;
+            line-height: 1.5;
+        }
+        
+        /* Progress bar - hidden */
+        #progress-bar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            z-index: 1000;
+        }
+        
+        #progress-fill {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        /* Participant info form - dark theme */
+        .participant-form {
+            background-color: #252A3D;
+            padding: 40px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .participant-form h2 {
+            color: white;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+        
+        .participant-form label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ccc;
+            font-weight: normal;
+            font-size: 14px;
+        }
+        
+        .participant-form input,
+        .participant-form select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        
+        /* Custom arrow for select */
+        .participant-form select {
+            background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3e%3cpolyline points="6 9 12 15 18 9"%3e%3c/polyline%3e%3c/svg%3e');
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 20px;
+            padding-right: 40px;
+        }
+        
+        .participant-form input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .participant-form select option {
+            background: #252A3D;
+            color: white;
+        }
+        
+        .participant-form input:focus,
+        .participant-form select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        /* Loading screen */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        /* Ensure survey forms are centered */
+        .jspsych-survey-html-form {
+            margin: 0 auto;
+            padding: 40px;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-top: 5px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 30px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .loading-subtext {
+            font-size: 16px;
+            color: #ccc;
+        }
+        
+        /* Fullscreen button */
+        #fullscreen-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(76, 175, 80, 0.95);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 999999;
+            display: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+        
+        #fullscreen-button:hover {
+            background: rgba(76, 175, 80, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        #fullscreen-button.visible {
+            display: block;
+        }
+        
+        /* Ensure button stays on top of jsPsych content */
+        .jspsych-content-wrapper {
+            z-index: 1;
+        }
+        
+        .jspsych-content {
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Fullscreen button (only visible when not in fullscreen) -->
+    <button id="fullscreen-button" onclick="enterFullscreen()">返回全屏</button>
+    
+    <!-- Progress bar -->
+    <div id="progress-bar">
+        <div id="progress-fill"></div>
+    </div>
+    
+    <!-- jsPsych Core -->
+    <script src="https://unpkg.com/jspsych@8.0.2"></script>
+    
+    <!-- jsPsych Plugins -->
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@2.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-image-keyboard-response@2.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-likert@2.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-fullscreen@2.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-preload@2.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-call-function@2.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-html-form@2.0.0"></script>
+    
+    <script>
+        // jsPsych v8 - initJsPsych and plugins are available globally
+        
+        // ====================================
+        // EXPERIMENT DATA
+        // ====================================
+        
+        // Practice images
+        const PRACTICE_IMAGES = {
+            high_arousal: ['H(1).jpg', 'H(2).jpg', 'H(3).jpg'],
+            low_arousal: ['L(1).jpg', 'L(2).jpg', 'L(3).jpg']
+        };
+        
+        // Formal experiment images
+        const FORMAL_IMAGES = [
+            '(1).jpg', '(2).jpg', '(3).jpg', '(4).jpg', '(5).jpg', 
+            '(6).jpg', '(7).jpg', '(8).jpg', '(9).jpg', '(10).jpg',
+            '(11).jpg', '(12).jpg', '(13).jpg', '(14).jpg', '(15).jpg',
+            '(16).jpg', '(17).jpg', '(18).jpg', '(19).jpg', '(20).jpg',
+            '(21).jpg', '(22).jpg', '(23).jpg', '(24).jpg', '(25).JPG',
+            '(26).jpg', '(27).jpg', '(28).jpg'
+        ];
+        
+        // Regulation strategies
+        const STRATEGIES = {
+            COGNITIVE_REAPPRAISAL: '认知重评',
+            NATURAL_VIEWING: '自然观看'
+        };
+        
+        // Trial design for practice
+        const PRACTICE_DESIGN = [
+            { image: PRACTICE_IMAGES.high_arousal[0], strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: PRACTICE_IMAGES.low_arousal[0], strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: PRACTICE_IMAGES.high_arousal[1], strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: PRACTICE_IMAGES.high_arousal[2], strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: PRACTICE_IMAGES.low_arousal[2], strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: PRACTICE_IMAGES.low_arousal[1], strategy: STRATEGIES.COGNITIVE_REAPPRAISAL }
+        ];
+        
+        // Trial design for formal experiment
+        const FORMAL_DESIGN = [
+            { image: '(3).jpg', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: '(10).jpg', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: '(8).jpg', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: '(4).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(22).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(5).jpg', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: '(20).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(23).jpg', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: '(17).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(18).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(2).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(28).jpg', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            'REST', // Rest break
+            { image: '(7).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(16).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(11).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(26).jpg', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: '(21).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(19).jpg', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: '(15).jpg', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: '(25).JPG', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: '(6).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(14).jpg', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: '(1).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(9).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(12).jpg', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: '(24).jpg', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL },
+            { image: '(27).jpg', strategy: STRATEGIES.NATURAL_VIEWING },
+            { image: '(13).jpg', strategy: STRATEGIES.COGNITIVE_REAPPRAISAL }
+        ];
+        
+        // ====================================
+        // CONFIGURATION
+        // ====================================
+        
+        const CONFIG = {
+            ASSET_PATH: './assets/images/',
+            EXPERIMENT_NAME: 'emotion_regulation',
+            REST_DURATION: 120000, // 2 minutes
+            ALLOW_REST_SKIP: true,
+            SHOW_PROGRESS: true
+        };
+        
+        // ====================================
+        // HELPER FUNCTIONS
+        // ====================================
+        
+        function updateProgress(current, total) {
+            if (CONFIG.SHOW_PROGRESS) {
+                const percentage = (current / total) * 100;
+                document.getElementById('progress-fill').style.width = percentage + '%';
+            }
+        }
+        
+        function getImagePath(filename) {
+            if (!filename) return '';
+            return CONFIG.ASSET_PATH + filename;
+        }
+        
+        function getAllImages() {
+            const images = new Set();
+            
+            // Add practice images
+            Object.values(PRACTICE_IMAGES).flat().forEach(img => images.add(img));
+            
+            // Add formal images
+            FORMAL_IMAGES.forEach(img => images.add(img));
+            
+            return Array.from(images);
+        }
+        
+        // ====================================
+        // TRIAL CREATION FUNCTIONS
+        // ====================================
+        
+        function createFixation() {
+            return {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: '<div class="fixation">+</div>',
+                choices: 'NO_KEYS',
+                trial_duration: 2000,
+                data: {
+                    trial_type: 'fixation',
+                    trial_phase: 'fixation'
+                }
+            };
+        }
+        
+        function createStrategyInstruction(strategy) {
+            return {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                    <div class="text-instruction" style="flex-direction: column;">
+                        <div style="font-size: 72px;">${strategy}</div>
+                        <div class="instruction-ready">
+                            准备好后，按任意键继续
+                        </div>
+                        <div style="margin-top: 30px; font-size: 20px; opacity: 0.8;">
+                            按任意键继续
+                        </div>
+                    </div>
+                `,
+                choices: 'ALL_KEYS',
+                data: {
+                    trial_type: 'strategy_instruction',
+                    strategy: strategy,
+                    trial_phase: 'instruction'
+                }
+            };
+        }
+        
+        function createPreparation() {
+            return {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: '<div class="text-instruction" style="height: 100vh;">准　备</div>',
+                choices: 'NO_KEYS',
+                trial_duration: 2000,
+                data: {
+                    trial_type: 'preparation',
+                    trial_phase: 'preparation'
+                }
+            };
+        }
+        
+        function createImagePresentation(imageName, strategy, blockNumber) {
+            return {
+                type: jsPsychImageKeyboardResponse,
+                stimulus: getImagePath(imageName),
+                choices: 'NO_KEYS',
+                trial_duration: 8000,
+                stimulus_width: null,  // Allow full width
+                stimulus_height: null,  // Allow full height
+                maintain_aspect_ratio: false,
+                render_on_canvas: false,
+                data: {
+                    trial_type: 'image_presentation',
+                    image_name: imageName,
+                    strategy: strategy,
+                    block_number: blockNumber,
+                    trial_phase: 'stimulus'
+                }
+            };
+        }
+        
+        function createRatingScale(imageName, strategy, blockNumber) {
+            return {
+                type: jsPsychSurveyLikert,
+                questions: [
+                    {
+                        prompt: '<div style="font-size: 32px; margin-bottom: 30px; color: white;">请评价您当前的情绪强度</div>',
+                        name: 'emotion_intensity',
+                        labels: [
+                            '1<br><span style="font-size: 12px; color: #aaa;">非常弱</span>',
+                            '2',
+                            '3',
+                            '4',
+                            '5<br><span style="font-size: 12px; color: #aaa;">中等</span>',
+                            '6',
+                            '7',
+                            '8',
+                            '9<br><span style="font-size: 12px; color: #aaa;">非常强</span>'
+                        ],
+                        required: true
+                    }
+                ],
+                button_label: '确认评分',
+                data: {
+                    trial_type: 'rating',
+                    strategy: strategy,
+                    image_name: imageName,
+                    block_number: blockNumber,
+                    trial_phase: 'rating'
+                },
+                scale_width: 600,
+                autocomplete: false,
+                button_html: '<button class="jspsych-btn" style="margin-top: 30px; padding: 18px 50px; font-size: 20px;">%choice%</button>'
+            };
+        }
+        
+        function createBlankScreen() {
+            return {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: '<div style="height: 100vh;"></div>',
+                choices: 'NO_KEYS',
+                trial_duration: 2000,
+                data: {
+                    trial_type: 'blank',
+                    trial_phase: 'iti'
+                }
+            };
+        }
+        
+        function createRestBreak() {
+            let start_time;
+            let interval;
+            
+            return {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: function() {
+                    return `
+                        <div class="text-instruction" style="flex-direction: column;">
+                            <div style="font-size: 72px; margin-bottom: 50px;">休息2分钟</div>
+                            <div class="rest-timer" id="rest-timer" style="font-size: 120px; color: #4CAF50; margin: 40px 0;">2:00</div>
+                            <div style="font-size: 36px; color: #ccc; margin-top: 50px;">
+                                ${CONFIG.ALLOW_REST_SKIP ? '按空格键可以提前继续' : ''}
+                            </div>
+                        </div>
+                    `;
+                },
+                choices: CONFIG.ALLOW_REST_SKIP ? [' '] : 'NO_KEYS',
+                trial_duration: CONFIG.REST_DURATION,
+                data: {
+                    trial_type: 'rest',
+                    trial_phase: 'rest'
+                },
+                on_load: function() {
+                    start_time = performance.now();
+                    
+                    interval = setInterval(() => {
+                        const elapsed = performance.now() - start_time;
+                        const remaining = Math.max(0, CONFIG.REST_DURATION - elapsed);
+                        const seconds = Math.floor(remaining / 1000);
+                        const minutes = Math.floor(seconds / 60);
+                        const display_seconds = seconds % 60;
+                        
+                        const timer = document.getElementById('rest-timer');
+                        if (timer) {
+                            timer.textContent = `${minutes}:${display_seconds.toString().padStart(2, '0')}`;
+                        }
+                        
+                        if (remaining <= 0) {
+                            clearInterval(interval);
+                        }
+                    }, 100);
+                },
+                on_finish: function(data) {
+                    if (interval) {
+                        clearInterval(interval);
+                    }
+                    data.rest_duration = performance.now() - start_time;
+                    data.skipped = data.rest_duration < CONFIG.REST_DURATION - 1000;
+                }
+            };
+        }
+        
+        // Build trial block (6 steps)
+        function createTrialBlock(design, blockNumber) {
+            const trials = [];
+            
+            // 1. Fixation
+            trials.push(createFixation());
+            
+            // 2. Strategy instruction (user-controlled)
+            trials.push(createStrategyInstruction(design.strategy));
+            
+            // 3. Preparation
+            trials.push(createPreparation());
+            
+            // 4. Image presentation
+            trials.push(createImagePresentation(design.image, design.strategy, blockNumber));
+            
+            // 5. Rating scale (user-controlled)
+            trials.push(createRatingScale(design.image, design.strategy, blockNumber));
+            
+            // 6. Blank screen
+            trials.push(createBlankScreen());
+            
+            return trials;
+        }
+        
+        // ====================================
+        // BUILD EXPERIMENT TIMELINE
+        // ====================================
+        
+        function buildExperimentTimeline(jsPsych) {
+            const timeline = [];
+            let totalBlocks = PRACTICE_DESIGN.length + FORMAL_DESIGN.filter(d => d !== 'REST').length;
+            let currentBlock = 0;
+            
+            // Enter fullscreen first
+            timeline.push({
+                type: jsPsychFullscreen,
+                fullscreen_mode: true,
+                message: `
+                    <div style="text-align: center; color: white;">
+                        <h1 style="margin-bottom: 30px;">情绪调节实验</h1>
+                        <p style="font-size: 20px; margin-bottom: 30px;">点击下方按钮进入全屏模式开始实验</p>
+                    </div>
+                `,
+                button_label: '进入实验'
+            });
+            
+            // Participant Information Form (now in fullscreen)
+            timeline.push({
+                type: jsPsychSurveyHtmlForm,
+                preamble: '',
+                html: `
+                    <div class="participant-form">
+                        <h2>参与者信息 | Participant Information</h2>
+                        <label for="participant_id">参与者编号 Participant ID *</label>
+                        <input type="text" id="participant_id" name="participant_id" required placeholder="例如: P001">
+                        
+                        <label for="age">年龄 Age *</label>
+                        <input type="number" id="age" name="age" min="18" max="100" required placeholder="18-100">
+                        
+                        <label for="gender">性别 Gender *</label>
+                        <select id="gender" name="gender" required>
+                            <option value="">请选择...</option>
+                            <option value="male">男 Male</option>
+                            <option value="female">女 Female</option>
+                        </select>
+                        
+                        <label for="notes">备注 Notes (可选 Optional)</label>
+                        <input type="text" id="notes" name="notes" placeholder="任何相关信息...">
+                    </div>
+                `,
+                button_label: '开始实验 Start Experiment',
+                data: {
+                    trial_type: 'participant_info'
+                },
+                on_finish: function(data) {
+                    // Store participant info globally
+                    jsPsych.data.addProperties({
+                        participant_id: data.response.participant_id,
+                        age: data.response.age,
+                        gender: data.response.gender,
+                        notes: data.response.notes || '',
+                        experiment_date: new Date().toISOString()
+                    });
+                }
+            });
+            
+            // Custom loading screen before preload
+            timeline.push({
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                    <div class="loading-container">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">准备加载实验材料</div>
+                        <div class="loading-subtext">Preparing to load experiment materials</div>
+                    </div>
+                `,
+                choices: 'NO_KEYS',
+                trial_duration: 1000
+            });
+            
+            // Preload all images with better visual feedback
+            const imagesToPreload = getAllImages().map(img => getImagePath(img));
+            // Also preload the experiment flow diagram
+            imagesToPreload.push('./assets/images/instructions/实验流程.jpg');
+            
+            timeline.push({
+                type: jsPsychPreload,
+                images: imagesToPreload,
+                show_progress_bar: true,
+                message: `
+                    <div style="text-align: center; color: white;">
+                        <div class="loading-spinner" style="margin: 0 auto 30px;"></div>
+                        <div style="font-size: 24px; margin-bottom: 20px;">正在加载实验材料</div>
+                        <div style="font-size: 16px; color: #ccc;">Loading experiment materials...</div>
+                    </div>
+                `,
+                error_message: '部分材料加载失败，实验将继续',
+                continue_after_error: true
+            });
+            
+            // Welcome screen
+            timeline.push({
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                    <div class="instruction-container">
+                        <h1>情绪调节实验</h1>
+                        <p>欢迎参加本次实验</p>
+                        <p>实验包含练习和正式两个部分</p>
+                        <p>实验过程中请集中注意力</p>
+                        <p>全程大约需要20-30分钟</p>
+                        <div style="margin-top: 40px; font-size: 24px; color: #aaa; animation: pulse 2s infinite;">
+                            按任意键继续
+                        </div>
+                    </div>
+                `,
+                choices: 'ALL_KEYS'
+            });
+            
+            // Experiment flow diagram - use the actual image
+            timeline.push({
+                type: jsPsychImageKeyboardResponse,
+                stimulus: './assets/images/instructions/实验流程.jpg',
+                choices: 'ALL_KEYS',
+                prompt: '<p style="color: #aaa; font-size: 24px; animation: pulse 2s infinite; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 100;">按任意键继续</p>',
+                stimulus_width: null,
+                stimulus_height: null,
+                maintain_aspect_ratio: true,
+                css_classes: ['full-screen-image'],
+                data: {
+                    trial_type: 'instruction',
+                    instruction_type: 'experiment_flow'
+                }
+            });
+            
+            // Rating scale practice/instruction - interactive scale
+            timeline.push({
+                type: jsPsychSurveyLikert,
+                questions: [
+                    {
+                        prompt: '在进行情绪调节之后，你现在的消极情绪有多少？',
+                        name: 'practice_emotion_rating',
+                        labels: [
+                            '1<br><span style="font-size: 18px; color: #888;">几乎没有</span>',
+                            '2',
+                            '3',
+                            '4',
+                            '5',
+                            '6',
+                            '7',
+                            '8',
+                            '9<br><span style="font-size: 18px; color: #888;">有非常多</span>'
+                        ],
+                        required: true
+                    }
+                ],
+                button_label: '继续',
+                data: {
+                    trial_type: 'rating_instruction',
+                    instruction_type: 'rating_practice'
+                },
+                preamble: `
+                    <div style="text-align: center; color: white; margin-bottom: 30px; background-color: #252A3D;">
+                        <h2 style="color: white; font-size: 32px;">评分练习</h2>
+                        <p style="color: #ccc; font-size: 20px;">请使用下面的量表进行评分，然后点击继续</p>
+                    </div>
+                `,
+                scale_width: 600,
+                autocomplete: false,
+                button_html: '<button class="jspsych-btn" style="margin-top: 30px; padding: 18px 50px; font-size: 20px;">%choice%</button>'
+            });
+            
+            // ====================================
+            // PRACTICE PHASE
+            // ====================================
+            
+            // Practice experiment text - simplified to keyboard only
+            timeline.push({
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                    <div class="text-instruction" style="flex-direction: column;">
+                        <div>练习实验</div>
+                        <div style="margin-top: 40px; font-size: 24px; color: #aaa; animation: pulse 2s infinite;">
+                            按任意键继续
+                        </div>
+                    </div>
+                `,
+                choices: 'ALL_KEYS',
+                data: {
+                    trial_type: 'instruction',
+                    instruction_type: 'practice_start'
+                }
+            });
+            
+            timeline.push({
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                    <div class="instruction-container">
+                        <h2>练习部分</h2>
+                        <p>接下来进行练习实验</p>
+                        <p>练习包含${PRACTICE_DESIGN.length}个试次</p>
+                        <p style="margin-top: 40px; font-size: 20px; opacity: 0.8;">按任意键开始练习</p>
+                    </div>
+                `,
+                choices: 'ALL_KEYS'
+            });
+            
+            // Add practice trials
+            PRACTICE_DESIGN.forEach((design, index) => {
+                currentBlock++;
+                
+                // Progress update
+                timeline.push({
+                    type: jsPsychCallFunction,
+                    func: function() {
+                        updateProgress(currentBlock, totalBlocks);
+                    }
+                });
+                
+                // Add trial block
+                const block = createTrialBlock(design, currentBlock);
+                block.forEach(trial => timeline.push(trial));
+            });
+            
+            // Practice complete
+            timeline.push({
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                    <div class="text-instruction" style="flex-direction: column;">
+                        <div>练习实验结束，下面开始正式实验。</div>
+                        <div style="margin-top: 40px; font-size: 24px; color: #aaa; animation: pulse 2s infinite;">
+                            按任意键继续
+                        </div>
+                    </div>
+                `,
+                choices: 'ALL_KEYS',
+                data: {
+                    trial_type: 'instruction',
+                    instruction_type: 'practice_end'
+                }
+            });
+            
+            timeline.push({
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                    <div class="instruction-container">
+                        <h2>练习完成</h2>
+                        <p>您已完成练习部分</p>
+                        <p>接下来是正式实验</p>
+                        <p style="margin-top: 40px; font-size: 20px; opacity: 0.8;">按任意键进入正式实验</p>
+                    </div>
+                `,
+                choices: 'ALL_KEYS'
+            });
+            
+            // ====================================
+            // FORMAL EXPERIMENT PHASE
+            // ====================================
+            
+            // Formal experiment text - simplified to keyboard only
+            timeline.push({
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                    <div class="text-instruction" style="flex-direction: column;">
+                        <div>正式实验</div>
+                        <div style="margin-top: 40px; font-size: 24px; color: #aaa; animation: pulse 2s infinite;">
+                            按任意键继续
+                        </div>
+                    </div>
+                `,
+                choices: 'ALL_KEYS',
+                data: {
+                    trial_type: 'instruction',
+                    instruction_type: 'formal_start'
+                }
+            });
+            
+            timeline.push({
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                    <div class="instruction-container">
+                        <h2>正式实验</h2>
+                        <p>现在开始正式实验</p>
+                        <p>请认真完成每个试次</p>
+                        <p>实验中会有一次休息时间</p>
+                        <p style="margin-top: 40px; font-size: 20px; opacity: 0.8;">按任意键开始正式实验</p>
+                    </div>
+                `,
+                choices: 'ALL_KEYS'
+            });
+            
+            // Add formal trials
+            FORMAL_DESIGN.forEach((design, index) => {
+                if (design === 'REST') {
+                    // Add rest break
+                    timeline.push(createRestBreak());
+                } else {
+                    currentBlock++;
+                    
+                    // Progress update
+                    timeline.push({
+                        type: jsPsychCallFunction,
+                        func: function() {
+                            updateProgress(currentBlock, totalBlocks);
+                        }
+                    });
+                    
+                    // Add trial block
+                    const block = createTrialBlock(design, currentBlock);
+                    block.forEach(trial => timeline.push(trial));
+                }
+            });
+            
+            // Exit fullscreen
+            timeline.push({
+                type: jsPsychFullscreen,
+                fullscreen_mode: false
+            });
+            
+            // End message
+            timeline.push({
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                    <div class="text-instruction" style="flex-direction: column;">
+                        <div style="font-size: 72px; margin-bottom: 50px;">实验结束</div>
+                        <div style="font-size: 36px; color: #ccc;">再次感谢你的真诚配合！</div>
+                    </div>
+                `,
+                choices: 'NO_KEYS',
+                trial_duration: 3000,
+                data: {
+                    trial_type: 'instruction',
+                    instruction_type: 'experiment_end'
+                }
+            });
+            
+            return timeline;
+        }
+        
+        // ====================================
+        // RUN EXPERIMENT
+        // ====================================
+        
+        function runExperiment() {
+            const jsPsych = initJsPsych({
+                on_finish: function() {
+                    // Save data
+                    const data = jsPsych.data.get();
+                    const participantId = data.values()[0].participant_id || 'unknown';
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                    const filename = `${CONFIG.EXPERIMENT_NAME}_${participantId}_${timestamp}`;
+                    
+                    // Save as CSV
+                    data.localSave('csv', `${filename}.csv`);
+                    
+                    // Calculate statistics
+                    const ratings = data.filter({trial_type: 'rating'}).values();
+                    const avgRating = ratings.length > 0 ? 
+                        ratings.reduce((sum, r) => sum + r.response.emotion_intensity, 0) / ratings.length : 0;
+                    
+                    const cognitiveTrials = ratings.filter(r => r.strategy === STRATEGIES.COGNITIVE_REAPPRAISAL);
+                    const naturalTrials = ratings.filter(r => r.strategy === STRATEGIES.NATURAL_VIEWING);
+                    
+                    const avgCognitive = cognitiveTrials.length > 0 ?
+                        cognitiveTrials.reduce((sum, r) => sum + r.response.emotion_intensity, 0) / cognitiveTrials.length : 0;
+                    
+                    const avgNatural = naturalTrials.length > 0 ?
+                        naturalTrials.reduce((sum, r) => sum + r.response.emotion_intensity, 0) / naturalTrials.length : 0;
+                    
+                    // Show completion screen with statistics
+                    document.body.innerHTML = `
+                        <div style="padding: 50px; background: #252A3D; color: white; text-align: center;">
+                            <h1>实验完成！</h1>
+                            <p>感谢您的参与</p>
+                            <hr style="margin: 30px 0; border-color: rgba(255,255,255,0.2);">
+                            <h3>实验统计</h3>
+                            <p>完成评分次数: ${ratings.length}</p>
+                            <p>总体平均情绪强度: ${avgRating.toFixed(2)}</p>
+                            <p>认知重评平均: ${avgCognitive.toFixed(2)} (n=${cognitiveTrials.length})</p>
+                            <p>自然观看平均: ${avgNatural.toFixed(2)} (n=${naturalTrials.length})</p>
+                            <p>平均反应时间: ${Math.round(data.filter({trial_type: 'rating'}).select('rt').mean())} ms</p>
+                            <hr style="margin: 30px 0; border-color: rgba(255,255,255,0.2);">
+                            <p>数据已保存为: ${filename}.csv</p>
+                            <button onclick="location.reload()" style="padding: 10px 20px; font-size: 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                重新开始
+                            </button>
+                        </div>
+                    `;
+                }
+            });
+            
+            // Build and run timeline
+            const timeline = buildExperimentTimeline(jsPsych);
+            
+            // Ensure fullscreen button stays on top
+            setTimeout(() => {
+                const button = document.getElementById('fullscreen-button');
+                const jsPsychDisplay = document.querySelector('.jspsych-display-element');
+                if (button && jsPsychDisplay) {
+                    // Move button inside jsPsych display to ensure it stays on top
+                    jsPsychDisplay.appendChild(button);
+                }
+                checkFullscreenState();
+            }, 100);
+            
+            jsPsych.run(timeline);
+        }
+        
+        // Fullscreen management
+        function enterFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+        }
+        
+        function checkFullscreenState() {
+            const button = document.getElementById('fullscreen-button');
+            if (!button) return;
+            
+            const isFullscreen = document.fullscreenElement || 
+                                document.webkitFullscreenElement || 
+                                document.msFullscreenElement;
+            
+            if (isFullscreen) {
+                button.classList.remove('visible');
+            } else {
+                button.classList.add('visible');
+            }
+        }
+        
+        // Monitor fullscreen changes
+        document.addEventListener('fullscreenchange', checkFullscreenState);
+        document.addEventListener('webkitfullscreenchange', checkFullscreenState);
+        document.addEventListener('msfullscreenchange', checkFullscreenState);
+        
+        // Check initial state and periodically
+        setTimeout(checkFullscreenState, 100);
+        setInterval(checkFullscreenState, 500); // Check every 500ms to ensure visibility
+        
+        // Mouse auto-hide functionality
+        let mouseTimer = null;
+        let cursorVisible = true;
+        
+        function hideCursor() {
+            document.body.classList.add('hide-cursor');
+            cursorVisible = false;
+        }
+        
+        function showCursor() {
+            document.body.classList.remove('hide-cursor');
+            cursorVisible = true;
+        }
+        
+        function resetMouseTimer() {
+            if (mouseTimer) {
+                clearTimeout(mouseTimer);
+            }
+            
+            if (!cursorVisible) {
+                showCursor();
+            }
+            
+            // Hide cursor after 3 seconds of inactivity
+            mouseTimer = setTimeout(hideCursor, 3000);
+        }
+        
+        // Set up mouse movement listener
+        document.addEventListener('mousemove', resetMouseTimer);
+        document.addEventListener('mousedown', resetMouseTimer);
+        document.addEventListener('mouseup', resetMouseTimer);
+        document.addEventListener('wheel', resetMouseTimer);
+        
+        // Initially hide cursor after 3 seconds
+        mouseTimer = setTimeout(hideCursor, 3000);
+        
+        // Start experiment when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', runExperiment);
+        } else {
+            runExperiment();
+        }
+    </script>
+</body>
+</html>
