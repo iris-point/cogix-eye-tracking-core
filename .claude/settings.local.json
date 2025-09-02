@@ -8,7 +8,9 @@
       "WebFetch(domain:www.jspsych.org)",
       "Bash(python:*)",
       "Bash(git add:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git submodule add:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []
