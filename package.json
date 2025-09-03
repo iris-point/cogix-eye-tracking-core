@@ -1,6 +1,6 @@
 {
   "name": "@iris-point/eye-tracking-core",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Minimal eye tracking core library for WebSocket-based hardware eye trackers",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
