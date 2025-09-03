@@ -23,7 +23,7 @@ const COMMANDS = {
   INIT_ET10C: {
     "req_cmd": "init_et10c",
     "eyeType": 0,
-    "resType": "640x368x30",
+    "resType": "1640x1232x60", // 60hz
     "numpoint": 5,
     "sceenTypeIndex": 1  // Note: typo preserved from HH
   },
