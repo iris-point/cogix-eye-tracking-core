@@ -217,8 +217,14 @@ jobs:
             
             ### 🌐 Browser Extension
             
+            **Extension ID**: `bgjkmeddgmjipccn`
+            
+            #### 📥 Direct Download Links
+            - **CRX File**: [`cogix-eye-tracking-extension.crx`](https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.crx)
+            - **ZIP File**: [`cogix-eye-tracking-extension.zip`](https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.zip)
+            
             #### Method 1: Install CRX (Easiest)
-            1. Download `cogix-eye-tracking-extension.crx` from the assets below
+            1. Download [`cogix-eye-tracking-extension.crx`](https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.crx)
             2. Open Chrome and navigate to `chrome://extensions/`
             3. Enable "Developer mode" (top right)
             4. Drag and drop the CRX file onto the extensions page
@@ -246,10 +252,22 @@ jobs:
             4. Enable "Developer mode"
             5. Click "Load unpacked" and select the extracted folder
             
+            ### 🔗 Permanent Download URLs
+            
+            Always get the latest version:
+            ```bash
+            # Latest CRX (direct link)
+            https://github.com/${{ github.repository }}/releases/latest/download/cogix-eye-tracking-extension.crx
+            
+            # Latest ZIP (direct link)
+            https://github.com/${{ github.repository }}/releases/latest/download/cogix-eye-tracking-extension.zip
+            ```
+            
             ### 📋 Links
             - [NPM Package](https://www.npmjs.com/package/@iris-point/eye-tracking-core)
             - [GitHub Package](https://github.com/${{ github.repository }}/packages)
             - [Documentation](https://github.com/${{ github.repository }})
+            - [All Releases](https://github.com/${{ github.repository }}/releases)
           draft: false
           prerelease: false
       
