@@ -1,3 +1,6 @@
 [submodule "eye-tracking-emotion-experiment"]
 	path = eye-tracking-emotion-experiment
 	url = https://github.com/iris-point/eye-tracking-emotion-experiment.git
+[submodule "cogix-browser-plugin"]
+	path = cogix-browser-plugin
+	url = https://github.com/iris-point/cogix-browser-plugin.git
