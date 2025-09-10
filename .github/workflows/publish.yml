@@ -142,6 +142,26 @@ jobs:
           zip -r ../cogix-eye-tracking-extension-v${VERSION}.zip .
           cd ..
           cp cogix-eye-tracking-extension-v${VERSION}.zip cogix-eye-tracking-extension.zip
+          
+          # Install crx3 for CRX generation
+          npm install -g crx3
+          
+          # Generate or use existing private key for CRX signing
+          # For CI, we'll generate a consistent key based on a secret or use a stored key
+          if [ -n "${{ secrets.CRX_PRIVATE_KEY }}" ]; then
+            # Use secret if available (base64 encoded)
+            echo "${{ secrets.CRX_PRIVATE_KEY }}" | base64 -d > key.pem
+          else
+            # Generate a new key for this build (less ideal for updates)
+            openssl genrsa -out key.pem 2048
+          fi
+          
+          # Create CRX file
+          crx3 dist -o cogix-eye-tracking-extension-v${VERSION}.crx -k key.pem
+          cp cogix-eye-tracking-extension-v${VERSION}.crx cogix-eye-tracking-extension.crx
+          
+          # Clean up key
+          rm -f key.pem
 
       # ============================================
       # Create Release Assets
@@ -197,21 +217,29 @@ jobs:
             
             ### 🌐 Browser Extension
             
-            #### Quick Install (Windows)
+            #### Method 1: Install CRX (Easiest)
+            1. Download `cogix-eye-tracking-extension.crx` from the assets below
+            2. Open Chrome and navigate to `chrome://extensions/`
+            3. Enable "Developer mode" (top right)
+            4. Drag and drop the CRX file onto the extensions page
+            
+            #### Method 2: Install from ZIP
+            
+            **Quick Install (Windows)**
             ```powershell
             iwr -Uri https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.zip -OutFile extension.zip
             Expand-Archive extension.zip -DestinationPath cogix-extension
             # Then load cogix-extension folder in Chrome
             ```
             
-            #### Quick Install (Mac/Linux)
+            **Quick Install (Mac/Linux)**
             ```bash
             curl -L https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.zip -o extension.zip
             unzip extension.zip -d cogix-extension
             # Then load cogix-extension folder in Chrome
             ```
             
-            #### Manual Installation
+            **Manual Installation**
             1. Download `cogix-eye-tracking-extension.zip` from the assets below
             2. Extract the ZIP file
             3. Open Chrome → `chrome://extensions/`
@@ -245,6 +273,26 @@ jobs:
           asset_path: ./browser-extension-eyetrack/cogix-eye-tracking-extension-v${{ steps.get_version.outputs.version }}.zip
           asset_name: cogix-eye-tracking-extension-v${{ steps.get_version.outputs.version }}.zip
           asset_content_type: application/zip
+      
+      - name: Upload Extension CRX
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./browser-extension-eyetrack/cogix-eye-tracking-extension.crx
+          asset_name: cogix-eye-tracking-extension.crx
+          asset_content_type: application/x-chrome-extension
+      
+      - name: Upload Extension CRX (versioned)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./browser-extension-eyetrack/cogix-eye-tracking-extension-v${{ steps.get_version.outputs.version }}.crx
+          asset_name: cogix-eye-tracking-extension-v${{ steps.get_version.outputs.version }}.crx
+          asset_content_type: application/x-chrome-extension
       
       # ============================================
       # Optional: Deploy Extension to GitHub Pages

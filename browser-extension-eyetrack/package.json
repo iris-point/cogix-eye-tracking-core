@@ -11,7 +11,7 @@
     "clean": "del /Q dist 2>nul || rmdir /S /Q dist 2>nul || echo No dist folder to clean",
     "package": "npm run build:prod && cd dist && tar -a -c -f ../cogix-eye-tracking-extension.zip *",
     "package:zip": "cd dist && tar -a -c -f ../cogix-eye-tracking-extension.zip *",
-    "package:crx": "echo CRX generation requires crx3 npm package and private key",
+    "package:crx": "node scripts/generate-crx.js",
     "release": "npm run clean && npm run generate-icons && node scripts/svg-to-png.js && npm run build:prod && npm run package",
     "prepare-release": "node scripts/prepare-release.js",
     "generate-icons": "node scripts/generate-icons.js",

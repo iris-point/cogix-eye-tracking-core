@@ -135,3 +135,5 @@ dist
 .yarn/install-state.gz
 .pnp.*
 .claude/settings.local.json
+browser-extension-eyetrack/key.pem.base64
+browser-extension-eyetrack/key.pub
