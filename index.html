@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cogix Eye Tracking Extension - Download & Install</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 60px;
+            animation: fadeIn 0.6s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 40px;
+        }
+        
+        .warning {
+            background: #fef3c7;
+            border: 2px solid #fbbf24;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: start;
+            gap: 15px;
+        }
+        
+        .warning-icon {
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+        
+        .download-section {
+            margin-bottom: 40px;
+        }
+        
+        .download-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 30px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        
+        .instructions {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .instructions h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .instructions ol {
+            list-style: none;
+            counter-reset: step;
+        }
+        
+        .instructions li {
+            counter-increment: step;
+            margin-bottom: 15px;
+            padding-left: 40px;
+            position: relative;
+            line-height: 1.6;
+            color: #4b5563;
+        }
+        
+        .instructions li::before {
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: #9333ea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        code {
+            background: #1f2937;
+            color: #10b981;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .quick-install {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+        
+        .quick-install pre {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .quick-install .comment {
+            color: #6b7280;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+        
+        .feature {
+            text-align: center;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 10px;
+        }
+        
+        .feature-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .feature-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .feature-desc {
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+        }
+        
+        .footer a {
+            color: #9333ea;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .version-badge {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            🎯 Cogix Eye Tracking Extension
+            <span class="version-badge">v1.0.5</span>
+        </h1>
+        <p class="subtitle">Professional eye tracking for Chrome - No store installation needed!</p>
+        
+        <div class="warning">
+            <span class="warning-icon">⚠️</span>
+            <div>
+                <strong>Developer Mode Required</strong><br>
+                This extension requires Chrome Developer Mode to be enabled. This is safe for extensions you trust.
+            </div>
+        </div>
+        
+        <div class="download-section">
+            <h2>📥 Download Extension</h2>
+            <div class="download-buttons">
+                <a href="cogix-eye-tracking-extension.zip" class="btn btn-primary" download>
+                    <span>📦</span> Download ZIP (Recommended)
+                </a>
+                <a href="https://github.com/cogix/cogix-eye-tracking-core/releases/latest" class="btn btn-secondary">
+                    <span>🔗</span> View on GitHub
+                </a>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h2>🚀 Installation Instructions</h2>
+            <ol>
+                <li>Download the extension using the button above</li>
+                <li>Extract the ZIP file to a folder on your computer</li>
+                <li>Open Chrome and navigate to <code>chrome://extensions/</code></li>
+                <li>Enable "Developer mode" using the toggle in the top-right corner</li>
+                <li>Click "Load unpacked" and select the extracted folder</li>
+                <li>The extension icon (🎯) will appear in your toolbar!</li>
+            </ol>
+        </div>
+        
+        <div class="instructions">
+            <h2>⚡ Quick Install (Advanced Users)</h2>
+            
+            <h3>Windows PowerShell</h3>
+            <div class="quick-install">
+                <pre><span class="comment"># One-line installation</span>
+iwr -Uri https://cogix.github.io/cogix-eye-tracking-core/install.ps1 -OutFile install.ps1; .\install.ps1</pre>
+            </div>
+            
+            <h3>macOS/Linux Terminal</h3>
+            <div class="quick-install">
+                <pre><span class="comment"># One-line installation</span>
+curl -L https://cogix.github.io/cogix-eye-tracking-core/install.sh | bash</pre>
+            </div>
+        </div>
+        
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">👁️</div>
+                <div class="feature-title">Eye Tracking</div>
+                <div class="feature-desc">Hardware & webcam support</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🎥</div>
+                <div class="feature-title">Screen Recording</div>
+                <div class="feature-desc">With gaze overlay</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">Data Analysis</div>
+                <div class="feature-desc">Heatmaps & metrics</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">☁️</div>
+                <div class="feature-title">Cloud Sync</div>
+                <div class="feature-desc">Via Cogix platform</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>
+                Made with ❤️ by <a href="https://cogix.app">Cogix</a> • 
+                <a href="https://github.com/cogix/cogix-eye-tracking-core">Source Code</a> • 
+                <a href="https://github.com/cogix/cogix-eye-tracking-core/issues">Report Issues</a>
+            </p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                SHA256: <code style="background: #f3f4f6; color: #6b7280;">878b1aace44f458df2a7a4f39fd0f47eab811475eb8454a4d62bc97afda5f091</code>
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // Track downloads
+        document.querySelectorAll('a[download]').forEach(link => {
+            link.addEventListener('click', () => {
+                console.log('Extension download initiated');
+                // Add your analytics here
+            });
+        });
+        
+        // Auto-update version from manifest
+        fetch('manifest.json')
+            .then(r => r.json())
+            .then(manifest => {
+                document.querySelector('.version-badge').textContent = `v${manifest.version}`;
+            })
+            .catch(() => {});
+    </script>
+</body>
+</html>
