@@ -16,14 +16,13 @@
   ],
   "host_permissions": [
     "<all_urls>",
-    "ws://localhost:8765/*",
-    "ws://localhost:9000/*",
-    "ws://127.0.0.1:8765/*",
-    "ws://127.0.0.1:9000/*",
-    "wss://localhost:8765/*",
+    "wss://127.0.0.1:8443/*",
+    "wss://localhost:8443/*",
     "https://app.cogix.com/*",
     "https://api.cogix.app/*",
-    "https://data-io.cogix.app/*"
+    "https://data-io.cogix.app/*",
+    "https://unpkg.com/*",
+    "https://cdn.jsdelivr.net/*"
   ],
   "background": {
     "service_worker": "background/background.js",
@@ -46,7 +45,10 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["lib/eye-tracker-core.js"],
+      "resources": [
+        "lib/eye-tracker-core.js",
+        "lib/eye-tracker-core.min.js"
+      ],
       "matches": ["<all_urls>"]
     }
   ],

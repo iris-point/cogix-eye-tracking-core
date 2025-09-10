@@ -110,6 +110,13 @@ jobs:
           npm install canvas
           node scripts/svg-to-png.js
       
+      - name: Verify SDK dist exists
+        run: |
+          echo "Checking if SDK dist exists..."
+          ls -la dist/
+          echo "SDK cogix-eye-tracking-core.min.js size:"
+          du -h dist/cogix-eye-tracking-core.min.js
+      
       - name: Update Extension version
         working-directory: ./browser-extension-eyetrack
         run: |
@@ -156,9 +163,36 @@ jobs:
             openssl genrsa -out key.pem 2048
           fi
           
-          # Create CRX file
+          # Create CRX file with proper format
+          # Note: CRX files from outside Chrome Web Store require special handling
           crx3 dist -o cogix-eye-tracking-extension-v${VERSION}.crx -k key.pem
           cp cogix-eye-tracking-extension-v${VERSION}.crx cogix-eye-tracking-extension.crx
+          
+          # Create installation instructions file
+          cat > INSTALLATION.txt << 'EOF'
+          Chrome Extension Installation Instructions
+          ==========================================
+          
+          Due to Chrome security policies, install using one of these methods:
+          
+          METHOD 1: Install from ZIP (Recommended)
+          1. Download cogix-eye-tracking-extension.zip
+          2. Extract to a folder
+          3. Open chrome://extensions/
+          4. Enable "Developer mode"
+          5. Click "Load unpacked" and select the folder
+          
+          METHOD 2: Install CRX with Developer Mode
+          1. Download cogix-eye-tracking-extension.crx
+          2. Open chrome://extensions/
+          3. Enable "Developer mode" FIRST
+          4. Drag the CRX file onto the extensions page
+          
+          METHOD 3: Use Chrome with flags
+          Run Chrome with: --enable-easy-off-store-extension-install
+          
+          Extension ID: bgjkmeddgmjipccn
+          EOF
           
           # Clean up key
           rm -f key.pem
@@ -220,16 +254,25 @@ jobs:
             **Extension ID**: `bgjkmeddgmjipccn`
             
             #### 📥 Direct Download Links
+            - **ZIP File (Recommended)**: [`cogix-eye-tracking-extension.zip`](https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.zip)
             - **CRX File**: [`cogix-eye-tracking-extension.crx`](https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.crx)
-            - **ZIP File**: [`cogix-eye-tracking-extension.zip`](https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.zip)
             
-            #### Method 1: Install CRX (Easiest)
+            #### Method 1: Install from ZIP (Recommended) ✅
+            1. Download [`cogix-eye-tracking-extension.zip`](https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.zip)
+            2. Extract the ZIP file to a folder
+            3. Open Chrome and navigate to `chrome://extensions/`
+            4. Enable "Developer mode" (top right)
+            5. Click "Load unpacked" and select the extracted folder
+            
+            #### Method 2: Install CRX (Advanced)
+            > ⚠️ **Note**: Chrome may show "CRX_REQUIRED_PROOF_MISSING" error. This is normal for extensions not from Chrome Web Store.
+            
             1. Download [`cogix-eye-tracking-extension.crx`](https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.crx)
             2. Open Chrome and navigate to `chrome://extensions/`
-            3. Enable "Developer mode" (top right)
-            4. Drag and drop the CRX file onto the extensions page
+            3. **IMPORTANT**: Enable "Developer mode" FIRST
+            4. Drag and drop the CRX file directly onto the extensions page
             
-            #### Method 2: Install from ZIP
+            #### Method 3: Quick Install Commands
             
             **Quick Install (Windows)**
             ```powershell

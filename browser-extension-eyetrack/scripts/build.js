@@ -75,6 +75,22 @@ function copyFile(src, dest) {
   return true;
 }
 
+// Copy SDK from local dist
+function copySDKFromParent() {
+  const localPath = path.join(distDir, 'lib', 'eye-tracker-core.js');
+  const parentSdkPath = path.join(rootDir, '..', 'dist', 'cogix-eye-tracking-core.min.js');
+  
+  if (fs.existsSync(parentSdkPath)) {
+    fs.copyFileSync(parentSdkPath, localPath);
+    console.log('✓ Local SDK copied from parent project dist/');
+    return true;
+  }
+  
+  console.error('❌ SDK not found! Please run "npm run build" in parent directory first.');
+  console.error(`Expected: ${parentSdkPath}`);
+  return false;
+}
+
 // Copy all files maintaining structure
 function copyFiles() {
   const files = [
@@ -97,7 +113,7 @@ function copyFiles() {
     
     // Libraries
     ['src/lib/dataio-client.js', 'lib/dataio-client.js'],
-    ['src/lib/eye-tracker-core.js', 'lib/eye-tracker-core.js'],
+    // eye-tracker-core.js will be downloaded from CDN
   ];
   
   let successCount = 0;
@@ -214,14 +230,19 @@ function build() {
   ensureDistDir();
   
   const fileCount = copyFiles();
+  
+  // Copy SDK from local dist  
+  copySDKFromParent();
+  
   processManifest();
   
-  console.log(`\n✅ Build complete! ${fileCount} files copied to dist/`);
+  console.log(`\n✅ Build complete! ${fileCount + 1} files copied to dist/`);
   console.log('📦 Load dist/ folder as unpacked extension in Chrome\n');
   
   if (!isWatch) {
-    console.log('SDK will be loaded from CDN:');
-    console.log('🌐 https://unpkg.com/@iris-point/eye-tracking-core@latest\n');
+    console.log('SDK Loading Strategy:');
+    console.log('🌐 Primary: CDN (https://unpkg.com/@iris-point/eye-tracking-core@latest)');
+    console.log('📁 Fallback: Local copy (from parent dist/) for CSP-restricted sites\n');
   }
 }
 

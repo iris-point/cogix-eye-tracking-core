@@ -9,40 +9,58 @@ let recordingStartTime = null;
 
 // Inject the eye tracking core library into the page
 function injectEyeTrackingCore() {
-  // Use the CDN version of the eye tracking core SDK
-  const script = document.createElement('script');
-  script.src = 'https://unpkg.com/@iris-point/eye-tracking-core@latest/dist/cogix-eye-tracking-core.min.js';
-  script.onload = function() {
-    console.log('Eye tracking core SDK loaded from CDN');
-    // Initialize eye tracker in page context
-    window.postMessage({ 
-      type: 'INIT_EYE_TRACKER',
-      config: {
-        wsUrl: 'ws://localhost:8765',
-        bufferSize: 1000,
-        emitInterval: 100
-      }
-    }, '*');
-  };
-  script.onerror = function() {
-    console.error('Failed to load eye tracking core SDK from CDN');
-    // Fallback to local version if CDN fails
-    const fallbackScript = document.createElement('script');
-    fallbackScript.src = chrome.runtime.getURL('lib/eye-tracker-core.js');
-    fallbackScript.onload = function() {
-      console.log('Eye tracking core SDK loaded from local fallback');
-      window.postMessage({ 
-        type: 'INIT_EYE_TRACKER',
-        config: {
-          wsUrl: 'ws://localhost:8765',
-          bufferSize: 1000,
-          emitInterval: 100
-        }
-      }, '*');
+  // Check if we're on GitHub or a site with strict CSP
+  const isStrictCSP = window.location.hostname.includes('github.com') || 
+                      window.location.protocol === 'https:';
+  
+  if (isStrictCSP) {
+    // Use local version for sites with strict CSP
+    console.log('Detected strict CSP, using local SDK');
+    const script = document.createElement('script');
+    script.src = chrome.runtime.getURL('lib/eye-tracker-core.js');
+    script.onload = function() {
+      console.log('Eye tracking core SDK loaded from extension');
+      initializeEyeTracker();
     };
-    (document.head || document.documentElement).appendChild(fallbackScript);
-  };
-  (document.head || document.documentElement).appendChild(script);
+    script.onerror = function() {
+      console.error('Failed to load local eye tracking SDK');
+    };
+    (document.head || document.documentElement).appendChild(script);
+  } else {
+    // Try CDN first for other sites
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/@iris-point/eye-tracking-core@latest/dist/cogix-eye-tracking-core.min.js';
+    script.onload = function() {
+      console.log('Eye tracking core SDK loaded from CDN');
+      initializeEyeTracker();
+    };
+    script.onerror = function() {
+      console.error('Failed to load eye tracking core SDK from CDN, trying local');
+      // Fallback to local version
+      const fallbackScript = document.createElement('script');
+      fallbackScript.src = chrome.runtime.getURL('lib/eye-tracker-core.js');
+      fallbackScript.onload = function() {
+        console.log('Eye tracking core SDK loaded from local fallback');
+        initializeEyeTracker();
+      };
+      (document.head || document.documentElement).appendChild(fallbackScript);
+    };
+    (document.head || document.documentElement).appendChild(script);
+  }
+}
+
+// Initialize eye tracker with configuration
+function initializeEyeTracker() {
+  window.postMessage({ 
+    type: 'INIT_EYE_TRACKER',
+    config: {
+      wsUrl: 'wss://127.0.0.1:8443',  // Use secure WebSocket
+      bufferSize: 1000,
+      emitInterval: 100,
+      reconnectDelay: 1000,
+      maxReconnectAttempts: 5
+    }
+  }, '*');
 }
 
 // Create gaze visualization overlay
