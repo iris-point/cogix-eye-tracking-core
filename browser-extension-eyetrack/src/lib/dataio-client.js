@@ -21,30 +21,29 @@ class DataIOClient {
   }
 
   /**
-   * Check if user is logged in to Cogix
+   * Check if user is logged in to Cogix with Clerk
    */
   async isAuthenticated() {
     try {
       // Try multiple domains where user might be logged in
       const domains = [
         'app.cogix.com',
-        'api.cogix.app',
         'localhost'
       ];
       
       for (const domain of domains) {
         const cookies = await chrome.cookies.getAll({ domain });
         
-        // Look for NextAuth session token or Clerk session
-        const sessionCookie = cookies.find(c => 
-          c.name === 'next-auth.session-token' || 
-          c.name === '__Secure-next-auth.session-token' ||
-          c.name.includes('__session') ||
-          c.name.includes('__client')
+        // Look for Clerk session cookies
+        const clerkSessionCookie = cookies.find(c => 
+          c.name === '__session' ||                    // Clerk's main session cookie
+          c.name === '__clerk_client' ||               // Clerk client cookie
+          c.name.startsWith('__client_uat') ||         // Clerk user auth token
+          c.name.startsWith('__session_')              // Clerk session with suffix
         );
         
-        if (sessionCookie) {
-          console.log('Found session cookie from domain:', domain);
+        if (clerkSessionCookie) {
+          console.log('Found Clerk session cookie from domain:', domain);
           return true;
         }
       }
@@ -57,14 +56,13 @@ class DataIOClient {
   }
 
   /**
-   * Get authentication token from shared session
-   * Supports both NextAuth and Clerk auth systems
+   * Get Clerk JWT token from browser session
+   * Extracts the session token that can be sent as Bearer token to backend
    */
   async getAuthToken() {
     try {
-      // Check multiple possible cookie locations
+      // Check multiple possible domains where user might be logged in
       const domains = [
-        new URL(this.config.backendUrl).hostname,
         'app.cogix.com',
         'localhost'
       ];
@@ -72,24 +70,111 @@ class DataIOClient {
       for (const domain of domains) {
         const cookies = await chrome.cookies.getAll({ domain });
         
-        // Look for auth tokens
-        const authCookie = cookies.find(c => 
-          c.name === 'next-auth.session-token' || 
-          c.name === '__Secure-next-auth.session-token' ||
-          c.name.includes('__session') ||
-          c.name === 'auth-token'
+        // Look for Clerk session cookie that contains the JWT
+        const clerkSessionCookie = cookies.find(c => 
+          c.name === '__session' ||                    // Clerk's main session cookie
+          c.name.startsWith('__session_')              // Clerk session with suffix
         );
         
-        if (authCookie) {
-          console.log('Using auth token from domain:', domain);
-          return authCookie.value;
+        if (clerkSessionCookie) {
+          console.log('Found Clerk session cookie from domain:', domain);
+          
+          // The Clerk session cookie value IS the JWT token
+          // that can be used as Bearer token with the backend
+          return clerkSessionCookie.value;
+        }
+        
+        // Alternative: Look for client-side auth token
+        const clerkClientCookie = cookies.find(c => 
+          c.name === '__clerk_client' ||
+          c.name.startsWith('__client_uat')
+        );
+        
+        if (clerkClientCookie) {
+          console.log('Found Clerk client cookie from domain:', domain);
+          // This might contain the token or a reference to it
+          // May need to decode/parse the value
+          return clerkClientCookie.value;
         }
       }
       
-      throw new Error('No authentication session found. Please log in to Cogix website first.');
+      // If no cookies found, try to get token from running Clerk instance
+      // This requires executing script in the context of the website
+      try {
+        const token = await this.getClerkTokenFromWebsite();
+        if (token) {
+          return token;
+        }
+      } catch (error) {
+        console.log('Could not get token from website context:', error.message);
+      }
+      
+      throw new Error('No Clerk authentication session found. Please log in to Cogix website first.');
     } catch (error) {
-      console.error('Failed to get auth token:', error);
+      console.error('Failed to get Clerk auth token:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get Clerk token from website by executing script in page context
+   */
+  async getClerkTokenFromWebsite() {
+    return new Promise((resolve, reject) => {
+      // Try to get token from active Cogix tab
+      chrome.tabs.query({ url: '*://app.cogix.com/*' }, async (tabs) => {
+        if (tabs.length === 0) {
+          // Try localhost
+          chrome.tabs.query({ url: '*://localhost:3000/*' }, async (localTabs) => {
+            if (localTabs.length === 0) {
+              reject(new Error('No Cogix tabs found'));
+              return;
+            }
+            await this.executeClerkScript(localTabs[0].id, resolve, reject);
+          });
+          return;
+        }
+        
+        await this.executeClerkScript(tabs[0].id, resolve, reject);
+      });
+    });
+  }
+
+  /**
+   * Execute script in page context to get Clerk session token
+   */
+  async executeClerkScript(tabId, resolve, reject) {
+    try {
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        func: () => {
+          // This runs in the page context where Clerk is available
+          try {
+            // Try to get token from window.__clerk if available
+            if (window.__clerk && window.__clerk.session) {
+              return window.__clerk.session.getToken();
+            }
+            
+            // Try alternative ways to get the token
+            if (window.Clerk && window.Clerk.session) {
+              return window.Clerk.session.getToken();
+            }
+            
+            return null;
+          } catch (error) {
+            console.error('Error getting Clerk token:', error);
+            return null;
+          }
+        }
+      });
+      
+      if (results && results[0] && results[0].result) {
+        resolve(results[0].result);
+      } else {
+        reject(new Error('Could not extract Clerk token from page'));
+      }
+    } catch (error) {
+      reject(error);
     }
   }
 
@@ -425,11 +510,21 @@ class DataIOClient {
   }
 }
 
-// Export for use in background script
+// Export for use in background script  
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = DataIOClient;
 }
 
+// Export for service worker context
+if (typeof self !== 'undefined' && typeof importScripts !== 'undefined') {
+  self.DataIOClient = DataIOClient;
+}
+
 // ES6 export for module imports
+if (typeof window !== 'undefined') {
+  window.DataIOClient = DataIOClient;
+}
+
+// For ES6 modules (if supported)
 export default DataIOClient;
 export { DataIOClient };

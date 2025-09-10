@@ -1,9 +1,6 @@
 // Import DataIOClient for cogix-data-io integration
-import('../lib/dataio-client.js').then(module => {
-  window.DataIOClient = module.DataIOClient || module.default || module;
-}).catch(err => {
-  console.error('Failed to load DataIOClient:', err);
-});
+// Note: Service workers can't use dynamic imports, so we'll load it differently
+importScripts(chrome.runtime.getURL('lib/dataio-client.js'));
 
 // Background service worker for managing recording and eye tracking
 let state = {
@@ -66,13 +63,13 @@ chrome.runtime.onInstalled.addListener(async () => {
 // Initialize DataIO configuration
 async function initializeDataIOConfig() {
   try {
-    if (!window.DataIOClient) {
+    if (!self.DataIOClient) {
       console.log('DataIOClient not yet loaded, retrying...');
       setTimeout(initializeDataIOConfig, 1000);
       return;
     }
     
-    const client = new window.DataIOClient({
+    const client = new self.DataIOClient({
       backendUrl: state.dataIOConfig.backendUrl
     });
     
@@ -191,11 +188,11 @@ async function getAvailableProjects() {
     }
     
     // If not in storage, fetch from API
-    if (!window.DataIOClient) {
+    if (!self.DataIOClient) {
       throw new Error('DataIOClient not loaded');
     }
     
-    const client = new window.DataIOClient({
+    const client = new self.DataIOClient({
       backendUrl: state.dataIOConfig.backendUrl
     });
     
@@ -622,13 +619,13 @@ async function submitToDataIO(sessionId) {
       return;
     }
     
-    if (!window.DataIOClient) {
+    if (!self.DataIOClient) {
       console.error('DataIOClient not loaded');
       return;
     }
     
     // Create DataIO client
-    const client = new window.DataIOClient({
+    const client = new self.DataIOClient({
       backendUrl: state.dataIOConfig.backendUrl,
       dataIOUrl: state.dataIOConfig.dataIOUrl,
       projectId: projectId,
@@ -654,7 +651,7 @@ async function submitToDataIO(sessionId) {
         url: state.recordingData.metadata.url,
         title: state.recordingData.metadata.title,
         browser: navigator.userAgent,
-        screenResolution: `${window.screen.width}x${window.screen.height}`,
+        screenResolution: '1920x1080', // Default since screen API not available in service worker
         recordingOptions: state.recordingData.metadata.options
       }
     };
