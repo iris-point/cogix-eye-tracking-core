@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eye Tracker Calibration</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 100vw;
+      height: 100vh;
+      background: #0f0f0f;
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Simple container since SDK handles the calibration UI */
+    #calibration-container {
+      text-align: center;
+      max-width: 600px;
+      padding: 2rem;
+    }
+    
+    #instructions {
+      margin-bottom: 2rem;
+    }
+    
+    #instructions h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    #instructions p {
+      font-size: 1.2rem;
+      opacity: 0.8;
+      margin-bottom: 1rem;
+      line-height: 1.6;
+    }
+    
+    #start-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 2rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    #start-btn:hover:not(:disabled) {
+      transform: scale(1.05);
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+    
+    #start-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    #status {
+      margin-top: 2rem;
+      padding: 1rem;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      transition: all 0.3s;
+    }
+    
+    #status.info {
+      background: rgba(59, 130, 246, 0.1);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    
+    #status.success {
+      background: rgba(16, 185, 129, 0.1);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    #status.warning {
+      background: rgba(245, 158, 11, 0.1);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    
+    #status.error {
+      background: rgba(239, 68, 68, 0.1);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    #completion-message {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(16, 185, 129, 0.1);
+      border: 2px solid #10b981;
+      padding: 3rem;
+      border-radius: 20px;
+      text-align: center;
+      z-index: 1000;
+    }
+    
+    #completion-message.active {
+      display: block;
+      animation: fadeIn 0.5s;
+    }
+    
+    #completion-message h2 {
+      color: #34d399;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    
+    #completion-message p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+    
+    #countdown {
+      font-size: 3rem;
+      color: #34d399;
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+    
+    /* SDK will inject its own calibration UI overlay */
+    .sdk-calibration-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+  <div id="calibration-container">
+    <div id="instructions">
+      <h1>Eye Tracker Calibration</h1>
+      <p>This calibration will help the eye tracker learn your unique eye movements.</p>
+      <p>You'll see 5 points appear on the screen. Look at each point and press spacebar when ready.</p>
+      <p>Keep your head still during calibration for best results.</p>
+      
+      <button id="start-btn" disabled>Loading SDK...</button>
+    </div>
+    
+    <div id="status"></div>
+  </div>
+  
+  <div id="completion-message">
+    <h2>✅ Calibration Complete!</h2>
+    <p>Your eye tracker is now calibrated and ready to use.</p>
+    <p>Window will close in <span id="countdown">3</span> seconds...</p>
+  </div>
+  
+  <!-- Load calibration script -->
+  <script src="calibration.js"></script>
+</body>
+</html>

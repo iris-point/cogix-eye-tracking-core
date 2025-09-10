@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Extension Icons</title>
+</head>
+<body>
+  <h1>Icon Generator</h1>
+  <p>Open this file in a browser and save the canvases as PNG files</p>
+  
+  <h2>16x16</h2>
+  <canvas id="icon-16" width="16" height="16"></canvas>
+  
+  <h2>48x48</h2>
+  <canvas id="icon-48" width="48" height="48"></canvas>
+  
+  <h2>128x128</h2>
+  <canvas id="icon-128" width="128" height="128"></canvas>
+  
+  <script>
+    // Draw icon on different sized canvases
+    const sizes = [16, 48, 128];
+    
+    sizes.forEach(size => {
+      const canvas = document.getElementById(`icon-${size}`);
+      const ctx = canvas.getContext('2d');
+      
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#667eea');
+      gradient.addColorStop(1, '#764ba2');
+      
+      // Draw background circle
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size/2 - 2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw eye (white ellipse)
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.ellipse(size/2, size/2, size*0.3, size*0.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw iris
+      ctx.fillStyle = '#333';
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size*0.12, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw pupil
+      ctx.fillStyle = 'black';
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size*0.06, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.beginPath();
+      ctx.arc(size/2 + size*0.05, size/2 - size*0.05, size*0.03, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw recording indicator (red dot)
+      if (size >= 48) {
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(size*0.75, size*0.25, size*0.08, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // Add download link
+      canvas.style.border = '1px solid #ccc';
+      canvas.style.margin = '10px';
+      
+      // Create download button
+      const btn = document.createElement('button');
+      btn.textContent = `Download icon-${size}.png`;
+      btn.style.marginLeft = '10px';
+      btn.onclick = () => {
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `icon-${size}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+      };
+      canvas.parentElement.appendChild(btn);
+    });
+  </script>
+</body>
+</html>

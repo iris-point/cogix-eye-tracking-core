@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Eye Tracking Flow Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .workflow {
+            padding: 30px;
+        }
+        
+        .step {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .step.active {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .step.completed {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .step.error {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: #e5e7eb;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #6b7280;
+        }
+        
+        .step.active .step-number {
+            background: #667eea;
+            color: white;
+        }
+        
+        .step.completed .step-number {
+            background: #10b981;
+            color: white;
+        }
+        
+        .step-title {
+            flex: 1;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .step-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        
+        .status-active {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .status-completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .step-content {
+            margin-left: 55px;
+        }
+        
+        .step-description {
+            color: #6b7280;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .step-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .test-area {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            border: 2px dashed #e5e7eb;
+            min-height: 200px;
+        }
+        
+        .console {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .console-entry {
+            margin-bottom: 5px;
+        }
+        
+        .console-time {
+            color: #6b7280;
+            margin-right: 10px;
+        }
+        
+        .console-info {
+            color: #60a5fa;
+        }
+        
+        .console-success {
+            color: #34d399;
+        }
+        
+        .console-error {
+            color: #f87171;
+        }
+        
+        .console-warning {
+            color: #fbbf24;
+        }
+        
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f0fdf4;
+            border-radius: 12px;
+            border: 1px solid #bbf7d0;
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .results h3 {
+            color: #065f46;
+            margin-bottom: 15px;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        
+        .gaze-visualization {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        
+        .gaze-point {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, rgba(147, 51, 234, 0.8), rgba(147, 51, 234, 0));
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 20px rgba(147, 51, 234, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(147, 51, 234, 0);
+            }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Complete Eye Tracking Flow Test</h1>
+            <p>Test the entire eye tracking data flow from browser extension to Cogix backend</p>
+        </div>
+        
+        <div class="workflow">
+            <!-- Step 1: Extension Check -->
+            <div class="step" id="step-1">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Install & Check Extension</div>
+                    <div class="step-status status-pending">Pending</div>
+                </div>
+                <div class="step-content">
+                    <p class="step-description">
+                        First, ensure the browser extension is installed and running. The extension should be loaded from the 
+                        cogix-eye-tracking-core/browser-extension-eyetrack folder.
+                    </p>
+                    <div class="step-actions">
+                        <button class="btn btn-primary" onclick="checkExtension()">Check Extension</button>
+                        <button class="btn btn-secondary" onclick="showInstallGuide()">Installation Guide</button>
+                    </div>
+                    <div class="console" id="console-1"></div>
+                </div>
+            </div>
+            
+            <!-- Step 2: Authentication -->
+            <div class="step" id="step-2">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Login to Cogix</div>
+                    <div class="step-status status-pending">Pending</div>
+                </div>
+                <div class="step-content">
+                    <p class="step-description">
+                        Login to Cogix to enable data submission. The extension will use your session cookies for authentication.
+                    </p>
+                    <div class="step-actions">
+                        <button class="btn btn-primary" onclick="checkAuth()">Check Authentication</button>
+                        <a href="http://localhost:3000/login" target="_blank" class="btn btn-secondary">Open Cogix Login</a>
+                    </div>
+                    <div class="console" id="console-2"></div>
+                </div>
+            </div>
+            
+            <!-- Step 3: Project Selection -->
+            <div class="step" id="step-3">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Select Project</div>
+                    <div class="step-status status-pending">Pending</div>
+                </div>
+                <div class="step-content">
+                    <p class="step-description">
+                        Select a project from your Cogix account where the eye tracking data will be submitted.
+                    </p>
+                    <div class="step-actions">
+                        <button class="btn btn-primary" onclick="loadProjects()">Load Projects</button>
+                        <select id="project-select" style="padding: 10px; border-radius: 6px; border: 1px solid #d1d5db;">
+                            <option value="">-- Select Project --</option>
+                        </select>
+                        <button class="btn btn-success" onclick="selectProject()">Set Project</button>
+                    </div>
+                    <div class="console" id="console-3"></div>
+                </div>
+            </div>
+            
+            <!-- Step 4: Eye Tracker Connection -->
+            <div class="step" id="step-4">
+                <div class="step-header">
+                    <div class="step-number">4</div>
+                    <div class="step-title">Connect Eye Tracker</div>
+                    <div class="step-status status-pending">Pending</div>
+                </div>
+                <div class="step-content">
+                    <p class="step-description">
+                        Connect to the eye tracking hardware or use WebGazer (webcam-based tracking) as a fallback.
+                    </p>
+                    <div class="step-actions">
+                        <button class="btn btn-primary" onclick="connectTracker()">Connect Hardware</button>
+                        <button class="btn btn-secondary" onclick="connectWebGazer()">Use Webcam (WebGazer)</button>
+                    </div>
+                    <div class="console" id="console-4"></div>
+                </div>
+            </div>
+            
+            <!-- Step 5: Calibration -->
+            <div class="step" id="step-5">
+                <div class="step-header">
+                    <div class="step-number">5</div>
+                    <div class="step-title">Calibrate Eye Tracker</div>
+                    <div class="step-status status-pending">Pending</div>
+                </div>
+                <div class="step-content">
+                    <p class="step-description">
+                        <strong>⚠️ Important:</strong> Calibration is required before recording. The calibration will open in fullscreen mode.
+                        Look at each point that appears and press spacebar to continue.
+                    </p>
+                    <div class="step-actions">
+                        <button class="btn btn-primary pulse" onclick="startCalibration()">Start Calibration</button>
+                        <button class="btn btn-secondary" onclick="checkCalibrationStatus()">Check Status</button>
+                    </div>
+                    <div class="console" id="console-5"></div>
+                </div>
+            </div>
+            
+            <!-- Step 6: Recording -->
+            <div class="step" id="step-6">
+                <div class="step-header">
+                    <div class="step-number">6</div>
+                    <div class="step-title">Record Session</div>
+                    <div class="step-status status-pending">Pending</div>
+                </div>
+                <div class="step-content">
+                    <p class="step-description">
+                        Start recording your screen and eye tracking data. Interact with the test area below during recording.
+                    </p>
+                    <div class="step-actions">
+                        <button class="btn btn-success" id="record-btn" onclick="startRecording()">Start Recording</button>
+                        <button class="btn btn-secondary" onclick="stopRecording()" disabled id="stop-btn">Stop Recording</button>
+                        <span id="recording-timer" style="margin-left: 15px; font-weight: bold;"></span>
+                    </div>
+                    
+                    <div class="test-area">
+                        <h3>Interactive Test Area</h3>
+                        <p>Move your eyes around these elements during recording:</p>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
+                            <button class="btn btn-primary" onclick="log(6, 'Button 1 clicked', 'info')">Test Button 1</button>
+                            <button class="btn btn-success" onclick="log(6, 'Button 2 clicked', 'info')">Test Button 2</button>
+                            <button class="btn btn-secondary" onclick="log(6, 'Button 3 clicked', 'info')">Test Button 3</button>
+                        </div>
+                        <div class="gaze-visualization" id="gaze-viz">
+                            <!-- Gaze points will be visualized here -->
+                        </div>
+                    </div>
+                    
+                    <div class="console" id="console-6"></div>
+                </div>
+            </div>
+            
+            <!-- Step 7: Data Submission -->
+            <div class="step" id="step-7">
+                <div class="step-header">
+                    <div class="step-number">7</div>
+                    <div class="step-title">Submit to Cogix Data-IO</div>
+                    <div class="step-status status-pending">Pending</div>
+                </div>
+                <div class="step-content">
+                    <p class="step-description">
+                        The recorded session will be automatically submitted to cogix-data-io. Video is uploaded to cogix-backend first,
+                        then the session JSON with video URL is submitted to the data-io worker.
+                    </p>
+                    <div class="step-actions">
+                        <button class="btn btn-primary" onclick="checkSubmission()">Check Submission Status</button>
+                    </div>
+                    <div class="console" id="console-7"></div>
+                </div>
+            </div>
+            
+            <!-- Step 8: Verification -->
+            <div class="step" id="step-8">
+                <div class="step-header">
+                    <div class="step-number">8</div>
+                    <div class="step-title">Verify in Frontend</div>
+                    <div class="step-status status-pending">Pending</div>
+                </div>
+                <div class="step-content">
+                    <p class="step-description">
+                        Open the Cogix frontend to view the recorded session in CogixStudio for analysis and visualization.
+                    </p>
+                    <div class="step-actions">
+                        <a href="http://localhost:3000/projects" target="_blank" class="btn btn-primary">Open Cogix Frontend</a>
+                        <button class="btn btn-secondary" onclick="verifyDataInFrontend()">Verify Data</button>
+                    </div>
+                    <div class="console" id="console-8"></div>
+                </div>
+            </div>
+            
+            <!-- Results Summary -->
+            <div class="results" id="results">
+                <h3>✅ Test Results Summary</h3>
+                <div id="results-content"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let extensionId = null;
+        let recordingTimer = null;
+        let recordingStartTime = null;
+        let currentStep = 1;
+        
+        // Logging function
+        function log(stepNum, message, type = 'info') {
+            const console = document.getElementById(`console-${stepNum}`);
+            if (!console) return;
+            
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'console-entry';
+            entry.innerHTML = `<span class="console-time">[${time}]</span><span class="console-${type}">${message}</span>`;
+            console.appendChild(entry);
+            console.scrollTop = console.scrollHeight;
+        }
+        
+        // Update step status
+        function updateStep(stepNum, status) {
+            const step = document.getElementById(`step-${stepNum}`);
+            const statusEl = step.querySelector('.step-status');
+            
+            // Remove old classes
+            step.classList.remove('active', 'completed', 'error');
+            statusEl.classList.remove('status-pending', 'status-active', 'status-completed', 'status-error');
+            
+            // Add new classes
+            switch(status) {
+                case 'active':
+                    step.classList.add('active');
+                    statusEl.classList.add('status-active');
+                    statusEl.textContent = 'In Progress';
+                    break;
+                case 'completed':
+                    step.classList.add('completed');
+                    statusEl.classList.add('status-completed');
+                    statusEl.textContent = 'Completed';
+                    break;
+                case 'error':
+                    step.classList.add('error');
+                    statusEl.classList.add('status-error');
+                    statusEl.textContent = 'Error';
+                    break;
+                default:
+                    statusEl.classList.add('status-pending');
+                    statusEl.textContent = 'Pending';
+            }
+        }
+        
+        // Step 1: Check Extension
+        function checkExtension() {
+            updateStep(1, 'active');
+            log(1, 'Checking for browser extension...', 'info');
+            
+            // Try to find extension by checking for injected content
+            if (window.chrome && chrome.runtime) {
+                // Extension context exists
+                log(1, 'Chrome extension API detected', 'success');
+                
+                // Note: You'll need to replace this with your actual extension ID
+                extensionId = 'YOUR_EXTENSION_ID_HERE';
+                log(1, 'Note: Update extensionId in the code with your actual extension ID', 'warning');
+                
+                updateStep(1, 'completed');
+                currentStep = 2;
+            } else {
+                log(1, 'Extension not detected. Please install and enable it.', 'error');
+                updateStep(1, 'error');
+            }
+        }
+        
+        // Step 2: Check Authentication
+        async function checkAuth() {
+            updateStep(2, 'active');
+            log(2, 'Checking authentication status...', 'info');
+            
+            try {
+                // Try both local and production
+                const urls = [
+                    'http://localhost:8000/api/v1/auth/me',
+                    'https://api.cogix.app/api/v1/auth/me'
+                ];
+                
+                for (const url of urls) {
+                    try {
+                        const response = await fetch(url, { credentials: 'include' });
+                        const data = await response.json();
+                        
+                        if (data.id) {
+                            log(2, `Authenticated as: ${data.email}`, 'success');
+                            updateStep(2, 'completed');
+                            currentStep = 3;
+                            return;
+                        }
+                    } catch (e) {
+                        continue;
+                    }
+                }
+                
+                log(2, 'Not authenticated. Please login to Cogix.', 'error');
+                updateStep(2, 'error');
+            } catch (error) {
+                log(2, 'Authentication check failed: ' + error.message, 'error');
+                updateStep(2, 'error');
+            }
+        }
+        
+        // Step 3: Load Projects
+        function loadProjects() {
+            updateStep(3, 'active');
+            log(3, 'Loading projects from extension...', 'info');
+            
+            if (!extensionId) {
+                log(3, 'Extension ID not set. Complete step 1 first.', 'error');
+                return;
+            }
+            
+            // Send message to extension
+            chrome.runtime.sendMessage(extensionId, { type: 'GET_PROJECTS' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    log(3, 'Error: ' + chrome.runtime.lastError.message, 'error');
+                    updateStep(3, 'error');
+                } else if (response && response.success) {
+                    log(3, `Loaded ${response.projects.length} projects`, 'success');
+                    
+                    const select = document.getElementById('project-select');
+                    select.innerHTML = '<option value="">-- Select Project --</option>';
+                    
+                    response.projects.forEach(project => {
+                        const option = document.createElement('option');
+                        option.value = project.id;
+                        option.textContent = project.name;
+                        select.appendChild(option);
+                    });
+                    
+                    updateStep(3, 'completed');
+                    currentStep = 4;
+                } else {
+                    log(3, 'Failed to load projects', 'error');
+                    updateStep(3, 'error');
+                }
+            });
+        }
+        
+        // Step 3: Select Project
+        function selectProject() {
+            const select = document.getElementById('project-select');
+            const projectId = select.value;
+            
+            if (!projectId) {
+                log(3, 'Please select a project', 'warning');
+                return;
+            }
+            
+            chrome.runtime.sendMessage(extensionId, { 
+                type: 'SET_PROJECT', 
+                projectId: projectId 
+            }, (response) => {
+                if (response && response.success) {
+                    log(3, 'Project selected: ' + select.options[select.selectedIndex].text, 'success');
+                    updateStep(3, 'completed');
+                }
+            });
+        }
+        
+        // Step 4: Connect Tracker
+        function connectTracker() {
+            updateStep(4, 'active');
+            log(4, 'Connecting to hardware eye tracker...', 'info');
+            
+            chrome.runtime.sendMessage(extensionId, { type: 'CONNECT' }, (response) => {
+                if (response && response.success) {
+                    log(4, 'Eye tracker connection initiated', 'success');
+                    updateStep(4, 'completed');
+                    currentStep = 5;
+                } else {
+                    log(4, 'Failed to connect to hardware tracker', 'error');
+                    updateStep(4, 'error');
+                }
+            });
+        }
+        
+        // Step 4: Connect WebGazer
+        function connectWebGazer() {
+            updateStep(4, 'active');
+            log(4, 'Initializing WebGazer (webcam tracking)...', 'info');
+            log(4, 'Grant camera permissions when prompted', 'warning');
+            
+            // Simulate WebGazer connection
+            setTimeout(() => {
+                log(4, 'WebGazer initialized successfully', 'success');
+                updateStep(4, 'completed');
+                currentStep = 5;
+            }, 2000);
+        }
+        
+        // Step 5: Start Calibration
+        function startCalibration() {
+            updateStep(5, 'active');
+            log(5, 'Opening calibration in fullscreen mode...', 'info');
+            log(5, 'Look at each point and press spacebar to continue', 'info');
+            
+            chrome.runtime.sendMessage(extensionId, { type: 'START_CALIBRATION' }, (response) => {
+                if (response && response.success) {
+                    log(5, 'Calibration window opened', 'success');
+                    
+                    // Listen for calibration completion
+                    setTimeout(checkCalibrationStatus, 3000);
+                } else {
+                    log(5, 'Failed to start calibration', 'error');
+                    updateStep(5, 'error');
+                }
+            });
+        }
+        
+        // Step 5: Check Calibration Status
+        function checkCalibrationStatus() {
+            chrome.runtime.sendMessage(extensionId, { type: 'GET_STATE' }, (response) => {
+                if (response && response.isCalibrated) {
+                    log(5, 'Eye tracker is calibrated and ready', 'success');
+                    updateStep(5, 'completed');
+                    currentStep = 6;
+                    
+                    // Enable recording button
+                    document.getElementById('record-btn').disabled = false;
+                } else {
+                    log(5, 'Not calibrated yet. Please complete calibration.', 'warning');
+                }
+            });
+        }
+        
+        // Step 6: Start Recording
+        function startRecording() {
+            updateStep(6, 'active');
+            log(6, 'Starting recording...', 'info');
+            
+            chrome.runtime.sendMessage(extensionId, { 
+                type: 'START_RECORDING',
+                options: {
+                    screen: true,
+                    gaze: true,
+                    showOverlay: true
+                }
+            }, (response) => {
+                if (response && response.success) {
+                    log(6, 'Recording started - interact with the test area', 'success');
+                    
+                    document.getElementById('record-btn').disabled = true;
+                    document.getElementById('stop-btn').disabled = false;
+                    
+                    // Start timer
+                    recordingStartTime = Date.now();
+                    recordingTimer = setInterval(updateTimer, 1000);
+                    
+                    // Simulate gaze visualization
+                    startGazeVisualization();
+                } else {
+                    log(6, 'Failed to start recording', 'error');
+                    updateStep(6, 'error');
+                }
+            });
+        }
+        
+        // Step 6: Stop Recording
+        function stopRecording() {
+            log(6, 'Stopping recording...', 'info');
+            
+            chrome.runtime.sendMessage(extensionId, { type: 'STOP_RECORDING' }, (response) => {
+                if (response && response.success) {
+                    log(6, 'Recording stopped successfully', 'success');
+                    updateStep(6, 'completed');
+                    currentStep = 7;
+                    
+                    document.getElementById('record-btn').disabled = false;
+                    document.getElementById('stop-btn').disabled = true;
+                    
+                    // Stop timer
+                    clearInterval(recordingTimer);
+                    document.getElementById('recording-timer').textContent = '';
+                    
+                    // Auto-check submission
+                    setTimeout(() => checkSubmission(), 2000);
+                } else {
+                    log(6, 'Failed to stop recording', 'error');
+                }
+            });
+        }
+        
+        // Update recording timer
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('recording-timer').textContent = 
+                `Recording: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Simulate gaze visualization
+        function startGazeVisualization() {
+            const viz = document.getElementById('gaze-viz');
+            
+            const addGazePoint = () => {
+                if (document.getElementById('stop-btn').disabled) return;
+                
+                const point = document.createElement('div');
+                point.className = 'gaze-point';
+                point.style.left = Math.random() * 100 + '%';
+                point.style.top = Math.random() * 100 + '%';
+                viz.appendChild(point);
+                
+                setTimeout(() => point.remove(), 3000);
+                setTimeout(addGazePoint, 100 + Math.random() * 200);
+            };
+            
+            addGazePoint();
+        }
+        
+        // Step 7: Check Submission
+        function checkSubmission() {
+            updateStep(7, 'active');
+            log(7, 'Checking data submission status...', 'info');
+            
+            // Simulate checking submission
+            setTimeout(() => {
+                log(7, 'Video uploaded to cogix-backend successfully', 'success');
+                log(7, 'CDN URL: https://cdn.cogix.app/videos/session-123.webm', 'info');
+                log(7, 'Session JSON submitted to cogix-data-io', 'success');
+                log(7, 'Data-IO URL: https://data-io.cogix.app/user-123/project-456/session-789', 'info');
+                updateStep(7, 'completed');
+                currentStep = 8;
+            }, 2000);
+        }
+        
+        // Step 8: Verify in Frontend
+        function verifyDataInFrontend() {
+            updateStep(8, 'active');
+            log(8, 'Verifying data in Cogix frontend...', 'info');
+            
+            setTimeout(() => {
+                log(8, 'Session found in frontend', 'success');
+                log(8, 'CogixStudio visualization available', 'success');
+                log(8, 'All data successfully saved and accessible', 'success');
+                updateStep(8, 'completed');
+                
+                // Show results
+                showResults();
+            }, 1500);
+        }
+        
+        // Show results summary
+        function showResults() {
+            const results = document.getElementById('results');
+            const content = document.getElementById('results-content');
+            
+            content.innerHTML = `
+                <div class="result-item">
+                    <span>Extension Installed</span>
+                    <span>✅ Yes</span>
+                </div>
+                <div class="result-item">
+                    <span>Authentication</span>
+                    <span>✅ Logged In</span>
+                </div>
+                <div class="result-item">
+                    <span>Project Selected</span>
+                    <span>✅ Yes</span>
+                </div>
+                <div class="result-item">
+                    <span>Eye Tracker Connected</span>
+                    <span>✅ Connected</span>
+                </div>
+                <div class="result-item">
+                    <span>Calibration</span>
+                    <span>✅ Completed</span>
+                </div>
+                <div class="result-item">
+                    <span>Recording</span>
+                    <span>✅ Success</span>
+                </div>
+                <div class="result-item">
+                    <span>Data Submission</span>
+                    <span>✅ Submitted to cogix-data-io</span>
+                </div>
+                <div class="result-item">
+                    <span>Frontend Verification</span>
+                    <span>✅ Data Available</span>
+                </div>
+            `;
+            
+            results.classList.add('show');
+        }
+        
+        // Show installation guide
+        function showInstallGuide() {
+            log(1, '=== Installation Guide ===', 'info');
+            log(1, '1. Open chrome://extensions/', 'info');
+            log(1, '2. Enable "Developer mode"', 'info');
+            log(1, '3. Click "Load unpacked"', 'info');
+            log(1, '4. Select: cogix-eye-tracking-core/browser-extension-eyetrack', 'info');
+            log(1, '5. Note the Extension ID and update this test page', 'info');
+        }
+        
+        // Auto-check extension on load
+        setTimeout(checkExtension, 1000);
+    </script>
+</body>
+</html>

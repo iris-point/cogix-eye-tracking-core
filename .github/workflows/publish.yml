@@ -1,4 +1,4 @@
-name: Publish to npm and GitHub Packages
+name: Publish SDK and Browser Extension
 
 on:
   push:
@@ -28,6 +28,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      # ============================================
+      # Build Core SDK
+      # ============================================
+      
       # Setup for npm registry
       - name: Setup Node for npm
         uses: actions/setup-node@v4
@@ -90,6 +94,59 @@ jobs:
           git push origin HEAD:main
           git push origin --tags
 
+      # ============================================
+      # Build Browser Extension
+      # ============================================
+      
+      - name: Install Extension dependencies
+        working-directory: ./browser-extension-eyetrack
+        run: npm ci
+      
+      - name: Generate Extension icons
+        working-directory: ./browser-extension-eyetrack
+        run: |
+          npm run generate-icons
+          # Install canvas for PNG generation
+          npm install canvas
+          node scripts/svg-to-png.js
+      
+      - name: Update Extension version
+        working-directory: ./browser-extension-eyetrack
+        run: |
+          # Get version from main package.json
+          VERSION=$(node -p "require('../package.json').version")
+          # Update extension package.json
+          npm version $VERSION --no-git-tag-version --allow-same-version
+      
+      - name: Build Extension
+        working-directory: ./browser-extension-eyetrack
+        run: |
+          export NODE_ENV=production
+          npm run build
+          
+          # Update manifest version in dist
+          VERSION=$(node -p "require('../package.json').version")
+          node -e "
+            const fs = require('fs');
+            const manifest = JSON.parse(fs.readFileSync('dist/manifest.json'));
+            manifest.version = '$VERSION';
+            fs.writeFileSync('dist/manifest.json', JSON.stringify(manifest, null, 2));
+          "
+      
+      - name: Create Extension packages
+        working-directory: ./browser-extension-eyetrack
+        run: |
+          VERSION=$(node -p "require('../package.json').version")
+          # Create ZIP
+          cd dist
+          zip -r ../cogix-eye-tracking-extension-v${VERSION}.zip .
+          cd ..
+          cp cogix-eye-tracking-extension-v${VERSION}.zip cogix-eye-tracking-extension.zip
+
+      # ============================================
+      # Create Release Assets
+      # ============================================
+      
       # Create GitHub Release
       - name: Get version for release
         id: get_version
@@ -101,21 +158,26 @@ jobs:
           fi
 
       - name: Create GitHub Release
+        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', steps.get_version.outputs.version) || github.ref }}
-          release_name: Release v${{ steps.get_version.outputs.version }}
+          release_name: Eye Tracking Core v${{ steps.get_version.outputs.version }}
           body: |
-            ## 🚀 Release v${{ steps.get_version.outputs.version }}
+            ## 🎯 Eye Tracking Core v${{ steps.get_version.outputs.version }}
             
-            ### 📦 Install from NPM Registry
+            This release includes both the Eye Tracking SDK and Browser Extension.
+            
+            ### 📦 Eye Tracking SDK
+            
+            #### Install from NPM Registry
             ```bash
             npm install @iris-point/eye-tracking-core@${{ steps.get_version.outputs.version }}
             ```
             
-            ### 📦 Install from GitHub Packages
+            #### Install from GitHub Packages
             ```bash
             # First, authenticate with GitHub Packages
             npm login --scope=@iris-point --auth-type=legacy --registry=https://npm.pkg.github.com
@@ -124,7 +186,7 @@ jobs:
             npm install @iris-point/eye-tracking-core@${{ steps.get_version.outputs.version }} --registry=https://npm.pkg.github.com
             ```
             
-            ### 🌐 CDN Links
+            #### CDN Links
             ```html
             <!-- unpkg -->
             <script src="https://unpkg.com/@iris-point/eye-tracking-core@${{ steps.get_version.outputs.version }}/dist/cogix-eye-tracking-core.min.js"></script>
@@ -133,8 +195,87 @@ jobs:
             <script src="https://cdn.jsdelivr.net/npm/@iris-point/eye-tracking-core@${{ steps.get_version.outputs.version }}/dist/cogix-eye-tracking-core.min.js"></script>
             ```
             
-            ### 📋 Package Links
+            ### 🌐 Browser Extension
+            
+            #### Quick Install (Windows)
+            ```powershell
+            iwr -Uri https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.zip -OutFile extension.zip
+            Expand-Archive extension.zip -DestinationPath cogix-extension
+            # Then load cogix-extension folder in Chrome
+            ```
+            
+            #### Quick Install (Mac/Linux)
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.zip -o extension.zip
+            unzip extension.zip -d cogix-extension
+            # Then load cogix-extension folder in Chrome
+            ```
+            
+            #### Manual Installation
+            1. Download `cogix-eye-tracking-extension.zip` from the assets below
+            2. Extract the ZIP file
+            3. Open Chrome → `chrome://extensions/`
+            4. Enable "Developer mode"
+            5. Click "Load unpacked" and select the extracted folder
+            
+            ### 📋 Links
             - [NPM Package](https://www.npmjs.com/package/@iris-point/eye-tracking-core)
-            - [GitHub Package](https://github.com/iris-point/cogix-eye-tracking-core/packages)
+            - [GitHub Package](https://github.com/${{ github.repository }}/packages)
+            - [Documentation](https://github.com/${{ github.repository }})
           draft: false
           prerelease: false
+      
+      # Upload Browser Extension to Release
+      - name: Upload Extension ZIP
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./browser-extension-eyetrack/cogix-eye-tracking-extension.zip
+          asset_name: cogix-eye-tracking-extension.zip
+          asset_content_type: application/zip
+      
+      - name: Upload Extension ZIP (versioned)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./browser-extension-eyetrack/cogix-eye-tracking-extension-v${{ steps.get_version.outputs.version }}.zip
+          asset_name: cogix-eye-tracking-extension-v${{ steps.get_version.outputs.version }}.zip
+          asset_content_type: application/zip
+      
+      # ============================================
+      # Optional: Deploy Extension to GitHub Pages
+      # ============================================
+      
+      - name: Prepare GitHub Pages
+        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+        run: |
+          mkdir -p gh-pages
+          
+          # Copy extension
+          cp browser-extension-eyetrack/cogix-eye-tracking-extension.zip gh-pages/
+          
+          # Copy installation scripts if they exist
+          [ -f browser-extension-eyetrack/scripts/install.sh ] && cp browser-extension-eyetrack/scripts/install.sh gh-pages/
+          [ -f browser-extension-eyetrack/scripts/install.ps1 ] && cp browser-extension-eyetrack/scripts/install.ps1 gh-pages/
+          
+          # Copy or create index.html
+          if [ -f browser-extension-eyetrack/docs/index.html ]; then
+            cp browser-extension-eyetrack/docs/index.html gh-pages/
+            # Update version in index.html
+            sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v${{ steps.get_version.outputs.version }}/g" gh-pages/index.html || true
+          fi
+          
+          # Create manifest.json for version checking
+          echo "{\"version\": \"${{ steps.get_version.outputs.version }}\"}" > gh-pages/manifest.json
+      
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./gh-pages
+          keep_files: true

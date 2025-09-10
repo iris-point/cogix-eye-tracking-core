@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eye Tracking Extension Test Setup</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: white;
+      padding: 40px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    
+    .subtitle {
+      text-align: center;
+      opacity: 0.9;
+      margin-bottom: 40px;
+      font-size: 1.2rem;
+    }
+    
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    
+    .test-card {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 24px;
+      backdrop-filter: blur(10px);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .test-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    }
+    
+    .test-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #6b7280;
+      animation: pulse 2s infinite;
+    }
+    
+    .status-indicator.connected {
+      background: #10b981;
+    }
+    
+    .status-indicator.error {
+      background: #ef4444;
+    }
+    
+    .status-indicator.warning {
+      background: #f59e0b;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .test-content {
+      margin: 20px 0;
+    }
+    
+    .test-button {
+      width: 100%;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 10px;
+    }
+    
+    .test-button:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateX(4px);
+    }
+    
+    .test-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    
+    .test-output:empty {
+      display: none;
+    }
+    
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .metric {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 10px;
+      border-radius: 6px;
+      text-align: center;
+    }
+    
+    .metric-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #fbbf24;
+    }
+    
+    .metric-label {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+    
+    #gaze-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+      display: none;
+    }
+    
+    #gaze-canvas.active {
+      display: block;
+    }
+    
+    .connection-info {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    
+    .info-row:last-child {
+      margin-bottom: 0;
+    }
+    
+    .info-label {
+      opacity: 0.8;
+    }
+    
+    .info-value {
+      font-weight: 600;
+    }
+    
+    #test-targets {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: none;
+    }
+    
+    .target {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border: 3px solid #fbbf24;
+      border-radius: 50%;
+      background: rgba(251, 191, 36, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    
+    .target.active {
+      transform: scale(1.5);
+      background: rgba(251, 191, 36, 0.5);
+    }
+    
+    .target.hit {
+      background: rgba(16, 185, 129, 0.5);
+      border-color: #10b981;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gaze-canvas"></canvas>
+  
+  <div id="test-targets">
+    <div class="target" data-target="1" style="left: -200px; top: -200px;">1</div>
+    <div class="target" data-target="2" style="left: 200px; top: -200px;">2</div>
+    <div class="target" data-target="3" style="left: 0px; top: 0px;">3</div>
+    <div class="target" data-target="4" style="left: -200px; top: 200px;">4</div>
+    <div class="target" data-target="5" style="left: 200px; top: 200px;">5</div>
+  </div>
+  
+  <div class="container">
+    <h1>🎯 Eye Tracking Extension Test Setup</h1>
+    <p class="subtitle">Comprehensive testing for WebSocket connection, calibration, and recording</p>
+    
+    <div class="connection-info">
+      <div class="info-row">
+        <span class="info-label">WebSocket URL:</span>
+        <span class="info-value" id="ws-url">ws://localhost:8765</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Connection Status:</span>
+        <span class="info-value" id="connection-status">Disconnected</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Device Status:</span>
+        <span class="info-value" id="device-status">Not Initialized</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Calibration Status:</span>
+        <span class="info-value" id="calibration-status">Not Calibrated</span>
+      </div>
+    </div>
+    
+    <div class="test-grid">
+      <!-- Connection Test -->
+      <div class="test-card">
+        <h3>
+          <span class="status-indicator" id="connection-indicator"></span>
+          Connection Test
+        </h3>
+        <div class="test-content">
+          <button class="test-button" id="test-connection">Test WebSocket Connection</button>
+          <button class="test-button" id="test-reconnection">Test Auto-Reconnection</button>
+          <button class="test-button" id="test-heartbeat">Test Heartbeat</button>
+          <div class="test-output" id="connection-output"></div>
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-value" id="latency">--</div>
+              <div class="metric-label">Latency (ms)</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" id="reconnects">0</div>
+              <div class="metric-label">Reconnections</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Calibration Test -->
+      <div class="test-card">
+        <h3>
+          <span class="status-indicator" id="calibration-indicator"></span>
+          Calibration Test
+        </h3>
+        <div class="test-content">
+          <button class="test-button" id="test-calibration">Start 5-Point Calibration</button>
+          <button class="test-button" id="test-quick-calibration">Quick 3-Point Calibration</button>
+          <button class="test-button" id="verify-calibration">Verify Calibration</button>
+          <div class="test-output" id="calibration-output"></div>
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-value" id="calibration-points">0/5</div>
+              <div class="metric-label">Points</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" id="calibration-quality">--</div>
+              <div class="metric-label">Quality %</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Data Stream Test -->
+      <div class="test-card">
+        <h3>
+          <span class="status-indicator" id="stream-indicator"></span>
+          Data Stream Test
+        </h3>
+        <div class="test-content">
+          <button class="test-button" id="test-stream">Start Gaze Stream</button>
+          <button class="test-button" id="test-visualization">Toggle Visualization</button>
+          <button class="test-button" id="test-accuracy">Test Accuracy</button>
+          <div class="test-output" id="stream-output"></div>
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-value" id="fps">0</div>
+              <div class="metric-label">FPS</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" id="data-points">0</div>
+              <div class="metric-label">Points</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Recording Test -->
+      <div class="test-card">
+        <h3>
+          <span class="status-indicator" id="recording-indicator"></span>
+          Recording Test
+        </h3>
+        <div class="test-content">
+          <button class="test-button" id="test-recording">Start Test Recording (10s)</button>
+          <button class="test-button" id="test-sync">Test Video Sync</button>
+          <button class="test-button" id="test-export">Export Test Data</button>
+          <div class="test-output" id="recording-output"></div>
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-value" id="recording-time">0s</div>
+              <div class="metric-label">Duration</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" id="buffer-size">0</div>
+              <div class="metric-label">Buffer</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Performance Test -->
+      <div class="test-card">
+        <h3>
+          <span class="status-indicator" id="performance-indicator"></span>
+          Performance Test
+        </h3>
+        <div class="test-content">
+          <button class="test-button" id="test-stress">Stress Test (1000 points)</button>
+          <button class="test-button" id="test-memory">Memory Usage Test</button>
+          <button class="test-button" id="test-cpu">CPU Load Test</button>
+          <div class="test-output" id="performance-output"></div>
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-value" id="memory-usage">--</div>
+              <div class="metric-label">Memory (MB)</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" id="dropped-frames">0</div>
+              <div class="metric-label">Dropped</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Error Handling Test -->
+      <div class="test-card">
+        <h3>
+          <span class="status-indicator" id="error-indicator"></span>
+          Error Handling Test
+        </h3>
+        <div class="test-content">
+          <button class="test-button" id="test-disconnect">Simulate Disconnect</button>
+          <button class="test-button" id="test-corruption">Send Corrupted Data</button>
+          <button class="test-button" id="test-recovery">Test Recovery</button>
+          <div class="test-output" id="error-output"></div>
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-value" id="errors-caught">0</div>
+              <div class="metric-label">Errors</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" id="recovery-time">--</div>
+              <div class="metric-label">Recovery</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="test-setup.js"></script>
+</body>
+</html>

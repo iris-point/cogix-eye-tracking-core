@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Cogix Eye Tracking Extension</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    
+    .test-section h2 {
+      color: #333;
+      margin-top: 0;
+      font-size: 20px;
+    }
+    
+    .step {
+      margin: 15px 0;
+      padding: 15px;
+      background: white;
+      border-radius: 6px;
+      border-left: 4px solid #667eea;
+    }
+    
+    .step-number {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      background: #667eea;
+      color: white;
+      text-align: center;
+      line-height: 30px;
+      border-radius: 50%;
+      margin-right: 10px;
+      font-weight: bold;
+    }
+    
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    
+    .status.success {
+      background: #10b981;
+      color: white;
+    }
+    
+    .status.error {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .status.pending {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    
+    button:hover {
+      background: #5a67d8;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .code-block {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+    
+    .info-box {
+      background: #dbeafe;
+      border: 1px solid #60a5fa;
+      color: #1e40af;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+    
+    .warning-box {
+      background: #fef3c7;
+      border: 1px solid #fbbf24;
+      color: #92400e;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+    
+    .test-area {
+      border: 2px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      margin: 20px 0;
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    
+    .gaze-dot {
+      width: 20px;
+      height: 20px;
+      background: #ef4444;
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      display: none;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 Cogix Eye Tracking Extension Test Page</h1>
+    <p class="subtitle">Test the complete eye tracking data flow from browser extension to cogix-data-io</p>
+    
+    <div class="info-box">
+      <strong>ℹ️ Important:</strong> Make sure you have:
+      <ul style="margin: 10px 0;">
+        <li>Installed the browser extension in Chrome</li>
+        <li>Logged in to Cogix at <a href="http://localhost:3000" target="_blank">localhost:3000</a> or <a href="https://app.cogix.com" target="_blank">app.cogix.com</a></li>
+        <li>Started the backend services (cogix-backend and cogix-data-api)</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>📋 Extension Setup</h2>
+      
+      <div class="step">
+        <span class="step-number">1</span>
+        <strong>Install Extension</strong>
+        <span id="extension-status" class="status pending">Not detected</span>
+        <p>Load the extension from <code>cogix-eye-tracking-core/browser-extension-eyetrack</code> in Chrome</p>
+      </div>
+      
+      <div class="step">
+        <span class="step-number">2</span>
+        <strong>Check Authentication</strong>
+        <span id="auth-status" class="status pending">Not checked</span>
+        <p>Click the extension icon and check if you're logged in to Cogix</p>
+        <button onclick="checkAuth()">Check Auth Status</button>
+      </div>
+      
+      <div class="step">
+        <span class="step-number">3</span>
+        <strong>Select Project</strong>
+        <span id="project-status" class="status pending">No project selected</span>
+        <p>Select a project in the extension popup for data submission</p>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>👁️ Eye Tracking Setup</h2>
+      
+      <div class="step">
+        <span class="step-number">1</span>
+        <strong>Connect Eye Tracker</strong>
+        <span id="tracker-status" class="status pending">Not connected</span>
+        <p>Click "Connect Eye Tracker" in the extension popup</p>
+        <div class="code-block">
+          WebSocket URL: ws://localhost:8765 or ws://127.0.0.1:9000
+        </div>
+      </div>
+      
+      <div class="step">
+        <span class="step-number">2</span>
+        <strong>Calibrate</strong>
+        <span id="calibration-status" class="status pending">Not calibrated</span>
+        <p>Click "Calibrate" and follow the on-screen points</p>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>🎬 Recording Test</h2>
+      
+      <div class="step">
+        <span class="step-number">1</span>
+        <strong>Start Recording</strong>
+        <span id="recording-status" class="status pending">Not recording</span>
+        <p>Click "Start Recording" in the extension popup</p>
+      </div>
+      
+      <div class="test-area">
+        <h3>Test Area - Move your eyes around</h3>
+        <p>Look at different parts of this area while recording</p>
+        <div id="test-content">
+          <button onclick="alert('Button clicked!')">Test Button 1</button>
+          <button onclick="alert('Button clicked!')">Test Button 2</button>
+          <button onclick="alert('Button clicked!')">Test Button 3</button>
+        </div>
+      </div>
+      
+      <div class="step">
+        <span class="step-number">2</span>
+        <strong>Stop Recording</strong>
+        <span id="stop-status" class="status pending">Not stopped</span>
+        <p>Click "Stop Recording" after at least 10 seconds</p>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>☁️ Data Submission Test</h2>
+      
+      <div class="step">
+        <span class="step-number">1</span>
+        <strong>Auto-Submit to Cogix</strong>
+        <span id="submit-status" class="status pending">Not submitted</span>
+        <p>Recording should automatically submit to cogix-data-io if "Auto-submit" is enabled</p>
+      </div>
+      
+      <div class="step">
+        <span class="step-number">2</span>
+        <strong>Verify in cogix-data-io</strong>
+        <span id="verify-status" class="status pending">Not verified</span>
+        <p>Check if data appears in the cogix-frontend sessions page</p>
+        <button onclick="window.open('http://localhost:3000/projects/[PROJECT_ID]/eye-tracking/sessions', '_blank')">
+          Open Sessions Page
+        </button>
+      </div>
+    </div>
+
+    <div class="warning-box">
+      <strong>⚠️ Troubleshooting:</strong>
+      <ul style="margin: 10px 0;">
+        <li>If authentication fails, log in to Cogix website and refresh the extension</li>
+        <li>If projects don't load, check that cogix-backend is running on port 8000</li>
+        <li>If submission fails, check that cogix-data-io worker is deployed or running locally</li>
+        <li>Check the browser console (F12) and extension console for error messages</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>🔍 Console Output</h2>
+      <div class="code-block" id="console-output">
+        Console messages will appear here...
+      </div>
+    </div>
+  </div>
+
+  <!-- Gaze visualization dot -->
+  <div class="gaze-dot" id="gaze-dot"></div>
+
+  <script>
+    // Check if extension is installed
+    function checkExtension() {
+      // Try to detect extension by checking for injected content
+      if (window.cogixExtension || document.querySelector('[data-cogix-extension]')) {
+        updateStatus('extension-status', 'success', 'Installed');
+        logMessage('✅ Extension detected');
+        return true;
+      } else {
+        updateStatus('extension-status', 'error', 'Not installed');
+        logMessage('❌ Extension not detected');
+        return false;
+      }
+    }
+
+    // Check authentication status
+    async function checkAuth() {
+      try {
+        // Send message to extension
+        const response = await chrome.runtime.sendMessage(
+          chrome.runtime.id,
+          { type: 'CHECK_AUTH' }
+        );
+        
+        if (response && response.authenticated) {
+          updateStatus('auth-status', 'success', 'Authenticated');
+          logMessage('✅ User is authenticated');
+        } else {
+          updateStatus('auth-status', 'error', 'Not authenticated');
+          logMessage('❌ User not authenticated');
+        }
+      } catch (error) {
+        logMessage('❌ Failed to check auth: ' + error.message);
+      }
+    }
+
+    // Update status indicator
+    function updateStatus(elementId, status, text) {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.className = 'status ' + status;
+        element.textContent = text;
+      }
+    }
+
+    // Log message to console output
+    function logMessage(message) {
+      const output = document.getElementById('console-output');
+      const timestamp = new Date().toLocaleTimeString();
+      output.innerHTML += `[${timestamp}] ${message}\n`;
+      output.scrollTop = output.scrollHeight;
+    }
+
+    // Listen for messages from extension
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'COGIX_EXTENSION_STATUS') {
+        logMessage('📡 Received status from extension: ' + JSON.stringify(event.data));
+        
+        // Update statuses based on extension data
+        if (event.data.isConnected) {
+          updateStatus('tracker-status', 'success', 'Connected');
+        }
+        if (event.data.isCalibrated) {
+          updateStatus('calibration-status', 'success', 'Calibrated');
+        }
+        if (event.data.isRecording) {
+          updateStatus('recording-status', 'success', 'Recording');
+        }
+        if (event.data.projectId) {
+          updateStatus('project-status', 'success', 'Project selected');
+        }
+      }
+      
+      // Handle gaze data for visualization
+      if (event.data.type === 'GAZE_DATA') {
+        const gazeDot = document.getElementById('gaze-dot');
+        gazeDot.style.display = 'block';
+        gazeDot.style.left = event.data.x + 'px';
+        gazeDot.style.top = event.data.y + 'px';
+      }
+    });
+
+    // Check extension on load
+    window.addEventListener('load', () => {
+      setTimeout(checkExtension, 1000);
+      logMessage('🚀 Test page loaded');
+      logMessage('📍 Waiting for extension...');
+    });
+
+    // Periodically check for updates
+    setInterval(() => {
+      // Request status update from extension
+      window.postMessage({ type: 'REQUEST_COGIX_STATUS' }, '*');
+    }, 2000);
+  </script>
+</body>
+</html>

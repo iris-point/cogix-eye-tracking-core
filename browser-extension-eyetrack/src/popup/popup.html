@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cogix Eye Tracking Recorder</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    /* Calibration Alert Styles */
+    .calibration-alert {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    
+    .calibration-alert .alert-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    
+    .calibration-alert .alert-content {
+      flex: 1;
+    }
+    
+    .calibration-alert strong {
+      display: block;
+      color: #92400e;
+      margin-bottom: 4px;
+    }
+    
+    .calibration-alert p {
+      font-size: 13px;
+      color: #78350f;
+      margin: 0;
+    }
+    
+    .status-value.calibrated {
+      color: #10b981;
+    }
+    
+    .status-value.not-calibrated {
+      color: #f59e0b;
+    }
+    
+    .btn.pulse {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 10px rgba(147, 51, 234, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(147, 51, 234, 0);
+      }
+    }
+    
+    /* Cogix Integration Styles */
+    .cogix-section {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .cogix-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    
+    .cogix-status.connected {
+      color: #10b981;
+    }
+    
+    .cogix-status.disconnected {
+      color: #ef4444;
+    }
+    
+    .project-selector {
+      margin-top: 10px;
+    }
+    
+    .project-selector label {
+      display: block;
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 5px;
+    }
+    
+    .project-selector select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+      background: white;
+    }
+    
+    .cogix-info {
+      margin-top: 10px;
+      padding: 10px;
+      background: #eff6ff;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #1e40af;
+    }
+    
+    .cogix-login-prompt {
+      padding: 10px;
+      background: #fef3c7;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #92400e;
+    }
+    
+    .cogix-login-prompt a {
+      color: #1e40af;
+      text-decoration: none;
+    }
+    
+    .cogix-login-prompt a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 Cogix Eye Tracking Recorder</h1>
+    
+    <!-- Calibration Alert -->
+    <div id="calibration-alert" class="calibration-alert" style="display: none;">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-content">
+        <strong>Calibration Required</strong>
+        <p>Please calibrate the eye tracker before recording. Calibration will open in fullscreen mode.</p>
+      </div>
+    </div>
+    
+    <div class="status-section">
+      <div class="status-item">
+        <span class="status-label">Eye Tracker:</span>
+        <span id="tracker-status" class="status-value disconnected">Disconnected</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Calibration:</span>
+        <span id="calibration-status" class="status-value not-calibrated">Not Calibrated</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Recording:</span>
+        <span id="recording-status" class="status-value inactive">Inactive</span>
+      </div>
+    </div>
+
+    <div class="controls-section">
+      <button id="connect-btn" class="btn btn-primary">
+        <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+        Connect Eye Tracker
+      </button>
+
+      <button id="calibrate-btn" class="btn btn-secondary" disabled>
+        <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+        </svg>
+        Calibrate
+      </button>
+
+      <div class="recording-controls">
+        <button id="record-btn" class="btn btn-record" disabled>
+          <svg class="icon" id="record-icon" viewBox="0 0 24 24" width="16" height="16">
+            <circle cx="12" cy="12" r="8" fill="currentColor"/>
+          </svg>
+          <span id="record-text">Start Recording</span>
+        </button>
+
+        <div id="recording-options" class="recording-options">
+          <label class="checkbox-label">
+            <input type="checkbox" id="record-screen" checked>
+            <span>Screen</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="record-camera" checked>
+            <span>Camera</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="record-audio">
+            <span>Audio</span>
+          </label>
+        </div>
+      </div>
+
+      <div id="timer" class="timer hidden">
+        <span id="timer-display">00:00</span>
+      </div>
+    </div>
+
+    <div class="data-section">
+      <h3>Recording Data</h3>
+      <div class="data-stats">
+        <div class="stat">
+          <span class="stat-label">Gaze Points:</span>
+          <span id="gaze-count" class="stat-value">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Duration:</span>
+          <span id="duration" class="stat-value">--:--</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">FPS:</span>
+          <span id="fps" class="stat-value">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="export-section hidden" id="export-section">
+      <h3>Export Options</h3>
+      <button id="download-video" class="btn btn-small">Download Video</button>
+      <button id="download-data" class="btn btn-small">Download Eye Data</button>
+      <button id="download-combined" class="btn btn-small">Download Combined</button>
+    </div>
+
+    <!-- Cogix Integration Section -->
+    <div class="cogix-section" id="cogix-section">
+      <h3>📊 Cogix Integration</h3>
+      
+      <!-- Authentication Status -->
+      <div id="cogix-auth-status" class="cogix-status disconnected">
+        <span id="auth-status-icon">🔒</span>
+        <span id="auth-status-text">Not logged in</span>
+      </div>
+      
+      <!-- Login Section (shown when not authenticated) -->
+      <div id="login-section" class="cogix-login-prompt" style="display: none;">
+        <p>Log in to Cogix to enable data submission:</p>
+        <button id="login-btn" class="btn btn-primary">
+          🔑 Log in to Cogix
+        </button>
+      </div>
+      
+      <!-- Project Selection (shown when authenticated) -->
+      <div id="project-section" style="display: none;">
+        <div class="project-selector">
+          <label for="project-select">Select Project:</label>
+          <select id="project-select">
+            <option value="">Loading projects...</option>
+          </select>
+        </div>
+        
+        <div id="project-info" class="cogix-info" style="display: none;">
+          <!-- Project details will be shown here -->
+        </div>
+        
+        <button id="refresh-projects-btn" class="btn btn-small" style="margin-top: 10px;">
+          🔄 Refresh Projects
+        </button>
+      </div>
+      
+      <!-- Recording Settings -->
+      <div id="recording-settings" style="display: none; margin-top: 15px;">
+        <h4>Recording Settings</h4>
+        <label class="checkbox-label">
+          <input type="checkbox" id="auto-submit" checked>
+          <span>Auto-submit to Cogix after recording</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <button id="settings-btn" class="btn btn-icon">
+        <svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+          <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

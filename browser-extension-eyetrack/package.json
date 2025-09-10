@@ -1,0 +1,50 @@
+{
+  "name": "cogix-eye-tracking-extension",
+  "version": "1.0.0",
+  "description": "Chrome browser extension for eye tracking with Cogix integration",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "build:prod": "set NODE_ENV=production&& node scripts/build.js",
+    "watch": "node scripts/build.js --watch",
+    "clean": "del /Q dist 2>nul || rmdir /S /Q dist 2>nul || echo No dist folder to clean",
+    "package": "npm run build:prod && cd dist && tar -a -c -f ../cogix-eye-tracking-extension.zip *",
+    "package:zip": "cd dist && tar -a -c -f ../cogix-eye-tracking-extension.zip *",
+    "package:crx": "echo CRX generation requires crx3 npm package and private key",
+    "release": "npm run clean && npm run generate-icons && node scripts/svg-to-png.js && npm run build:prod && npm run package",
+    "prepare-release": "node scripts/prepare-release.js",
+    "generate-icons": "node scripts/generate-icons.js",
+    "generate-png": "node scripts/svg-to-png.js",
+    "setup": "npm run generate-icons && npm run generate-png && npm run build",
+    "version:patch": "npm version patch",
+    "version:minor": "npm version minor",
+    "version:major": "npm version major",
+    "test": "echo \"No tests configured yet\"",
+    "lint": "echo \"No linting configured yet\""
+  },
+  "keywords": [
+    "eye-tracking",
+    "browser-extension",
+    "chrome-extension",
+    "cogix",
+    "webgazer",
+    "screen-recording"
+  ],
+  "author": "Cogix Team",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "canvas": "^3.2.0"
+  },
+  "config": {
+    "cdnUrl": "https://unpkg.com/@iris-point/eye-tracking-core@latest",
+    "backendUrl": {
+      "local": "http://localhost:8000",
+      "production": "https://api.cogix.app"
+    },
+    "dataIOUrl": {
+      "local": "http://localhost:8001",
+      "production": "https://data-io.cogix.app"
+    }
+  }
+}

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for depth -->
+    <radialGradient id="bgGradient128">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Eye gradient -->
+    <radialGradient id="eyeGradient128">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#f0f4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Pupil gradient -->
+    <radialGradient id="pupilGradient128" cx="40%" cy="40%">
+      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#334155;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Target crosshair gradient -->
+    <linearGradient id="targetGradient128" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ec4899;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:0.8" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="61.44" fill="url(#bgGradient128)" />
+  
+  <!-- Eye shape (ellipse for realistic look) -->
+  <ellipse cx="64" cy="64" 
+           rx="49.92" ry="38.4" 
+           fill="url(#eyeGradient128)" 
+           stroke="#667eea" stroke-width="2.56" />
+  
+  <!-- Iris -->
+  <circle cx="64" cy="64" r="30.72" 
+          fill="#667eea" opacity="0.3" />
+  
+  <!-- Pupil with tracking dot -->
+  <circle cx="70.4" cy="60.16" 
+          r="15.36" fill="url(#pupilGradient128)" />
+  
+  <!-- Light reflection on pupil -->
+  <ellipse cx="57.6" cy="53.76" 
+           rx="6.144" ry="4.608" 
+           fill="white" opacity="0.7" />
+  
+  <!-- Target crosshair overlay -->
+  <g stroke="url(#targetGradient128)" stroke-width="1.92" fill="none" opacity="0.7">
+    <!-- Horizontal line -->
+    <line x1="12.799999999999997" y1="64" 
+          x2="44.8" y2="64" />
+    <line x1="83.2" y1="64" 
+          x2="115.2" y2="64" />
+    
+    <!-- Vertical line -->
+    <line x1="64" y1="12.799999999999997" 
+          x2="64" y2="44.8" />
+    <line x1="64" y1="83.2" 
+          x2="64" y2="115.2" />
+    
+    <!-- Target circle -->
+    <circle cx="64" cy="64" r="51.2" 
+            stroke-dasharray="6.4 2.56" />
+  </g>
+  
+  <!-- Recording indicator dot (red dot in corner) -->
+  
+  <circle cx="102.4" cy="25.6" r="10.24" 
+          fill="#ef4444" stroke="white" stroke-width="2.56">
+    <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  
+</svg>

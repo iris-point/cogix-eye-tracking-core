@@ -50,13 +50,15 @@
     "prepublishOnly": "npm run build",
     "test": "echo \"No tests configured yet\"",
     "release": "node scripts/release.js",
+    "release:all": "node scripts/release-all.js",
     "release:quick": "npm version patch && git push --follow-tags",
     "release:patch": "npm version patch",
     "release:minor": "npm version minor",
     "release:major": "npm version major",
     "release:alpha": "npm version prerelease --preid=alpha",
     "release:beta": "npm version prerelease --preid=beta",
-    "postversion": "git push --follow-tags && echo 'Version tagged. GitHub Actions will now publish to npm.'"
+    "postversion": "git push --follow-tags && echo 'Version tagged. GitHub Actions will now publish to npm.'",
+    "validate": "tsc --noEmit && echo 'TypeScript validation passed'"
   },
   "keywords": [
     "eye-tracking",

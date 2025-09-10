@@ -1,0 +1,228 @@
+name: Build and Release Chrome Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.1)'
+        required: true
+        type: string
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: cogix-eye-tracking-core/browser-extension-eyetrack/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: cogix-eye-tracking-core/browser-extension-eyetrack
+      run: npm ci
+    
+    - name: Generate icons
+      working-directory: cogix-eye-tracking-core/browser-extension-eyetrack
+      run: |
+        npm run generate-icons
+        node scripts/svg-to-png.js
+    
+    - name: Build extension
+      working-directory: cogix-eye-tracking-core/browser-extension-eyetrack
+      run: |
+        # Set production mode
+        export NODE_ENV=production
+        npm run build
+    
+    - name: Create ZIP for distribution
+      working-directory: cogix-eye-tracking-core/browser-extension-eyetrack
+      run: |
+        cd dist
+        zip -r ../cogix-eye-tracking-extension.zip .
+        cd ..
+        
+    - name: Create CRX file (unsigned)
+      working-directory: cogix-eye-tracking-core/browser-extension-eyetrack
+      run: |
+        # Install crx3 tool
+        npm install -g crx3
+        
+        # Generate keypair if doesn't exist
+        if [ ! -f key.pem ]; then
+          openssl genrsa -out key.pem 2048
+        fi
+        
+        # Create CRX file
+        crx3 dist -o cogix-eye-tracking-extension.crx -k key.pem
+    
+    - name: Calculate checksums
+      working-directory: cogix-eye-tracking-core/browser-extension-eyetrack
+      run: |
+        sha256sum cogix-eye-tracking-extension.zip > checksums.txt
+        sha256sum cogix-eye-tracking-extension.crx >> checksums.txt
+    
+    - name: Get version
+      id: version
+      working-directory: cogix-eye-tracking-core/browser-extension-eyetrack
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION=${GITHUB_REF#refs/tags/v}
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        
+        # Update manifest version
+        node -e "
+          const fs = require('fs');
+          const manifest = JSON.parse(fs.readFileSync('dist/manifest.json'));
+          manifest.version = '$VERSION';
+          fs.writeFileSync('dist/manifest.json', JSON.stringify(manifest, null, 2));
+        "
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        release_name: Cogix Eye Tracking Extension v${{ steps.version.outputs.VERSION }}
+        body: |
+          ## 🎯 Cogix Eye Tracking Extension v${{ steps.version.outputs.VERSION }}
+          
+          ### Installation Methods
+          
+          #### Method 1: Direct ZIP Installation (Recommended)
+          1. Download `cogix-eye-tracking-extension.zip` from below
+          2. Extract the ZIP file to a folder
+          3. Open Chrome and go to `chrome://extensions/`
+          4. Enable "Developer mode"
+          5. Click "Load unpacked" and select the extracted folder
+          
+          #### Method 2: CRX Installation (Advanced)
+          1. Download `cogix-eye-tracking-extension.crx`
+          2. Open Chrome and go to `chrome://extensions/`
+          3. Enable "Developer mode"
+          4. Drag and drop the CRX file onto the extensions page
+          
+          #### Method 3: Install from CDN
+          ```bash
+          # Download and extract latest version
+          curl -L https://github.com/${{ github.repository }}/releases/latest/download/cogix-eye-tracking-extension.zip -o extension.zip
+          unzip extension.zip -d cogix-extension
+          # Then load the cogix-extension folder in Chrome
+          ```
+          
+          ### CDN URLs
+          - ZIP: `https://github.com/${{ github.repository }}/releases/latest/download/cogix-eye-tracking-extension.zip`
+          - CRX: `https://github.com/${{ github.repository }}/releases/latest/download/cogix-eye-tracking-extension.crx`
+          
+          ### Checksums
+          See `checksums.txt` for SHA256 verification
+          
+        draft: false
+        prerelease: false
+    
+    - name: Upload ZIP to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: cogix-eye-tracking-core/browser-extension-eyetrack/cogix-eye-tracking-extension.zip
+        asset_name: cogix-eye-tracking-extension.zip
+        asset_content_type: application/zip
+    
+    - name: Upload CRX to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: cogix-eye-tracking-core/browser-extension-eyetrack/cogix-eye-tracking-extension.crx
+        asset_name: cogix-eye-tracking-extension.crx
+        asset_content_type: application/x-chrome-extension
+    
+    - name: Upload Checksums
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: cogix-eye-tracking-core/browser-extension-eyetrack/checksums.txt
+        asset_name: checksums.txt
+        asset_content_type: text/plain
+    
+    - name: Deploy to GitHub Pages (CDN)
+      working-directory: cogix-eye-tracking-core/browser-extension-eyetrack
+      run: |
+        # Create a simple installation page
+        mkdir -p gh-pages
+        cp cogix-eye-tracking-extension.zip gh-pages/
+        cp cogix-eye-tracking-extension.crx gh-pages/
+        
+        # Create index.html for easy installation
+        cat > gh-pages/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Cogix Eye Tracking Extension</title>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: system-ui; max-width: 800px; margin: 50px auto; padding: 20px; }
+            .button { display: inline-block; padding: 12px 24px; background: #9333ea; color: white; text-decoration: none; border-radius: 8px; margin: 10px; }
+            .button:hover { background: #7c3aed; }
+            code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+            .warning { background: #fef3c7; border: 1px solid #fbbf24; padding: 15px; border-radius: 8px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <h1>🎯 Cogix Eye Tracking Extension</h1>
+          
+          <div class="warning">
+            <strong>⚠️ Developer Mode Required</strong><br>
+            This extension requires Chrome Developer Mode to be enabled for installation.
+          </div>
+          
+          <h2>Installation Instructions</h2>
+          
+          <ol>
+            <li>Download the extension:
+              <br><a href="cogix-eye-tracking-extension.zip" class="button">📦 Download ZIP</a>
+              <a href="cogix-eye-tracking-extension.crx" class="button">🔧 Download CRX</a>
+            </li>
+            <li>Open Chrome and navigate to <code>chrome://extensions/</code></li>
+            <li>Enable "Developer mode" using the toggle in the top-right corner</li>
+            <li>For ZIP: Click "Load unpacked" and select the extracted folder<br>
+                For CRX: Drag and drop the file onto the extensions page</li>
+          </ol>
+          
+          <h2>Alternative Installation via Script</h2>
+          <pre><code># One-line installation (Linux/Mac)
+curl -L https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/install.sh | bash
+
+# Windows PowerShell
+iwr -Uri https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/install.ps1 -OutFile install.ps1; .\install.ps1</code></pre>
+          
+          <hr>
+          <p>Version: v${{ steps.version.outputs.VERSION }} | <a href="https://github.com/${{ github.repository }}">GitHub</a></p>
+        </body>
+        </html>
+        EOF
+        
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: cogix-eye-tracking-core/browser-extension-eyetrack/gh-pages
+        cname: extension.cogix.app  # Optional: Use custom domain if available

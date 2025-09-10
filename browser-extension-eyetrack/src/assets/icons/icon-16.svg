@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for depth -->
+    <radialGradient id="bgGradient16">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Eye gradient -->
+    <radialGradient id="eyeGradient16">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#f0f4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Pupil gradient -->
+    <radialGradient id="pupilGradient16" cx="40%" cy="40%">
+      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#334155;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Target crosshair gradient -->
+    <linearGradient id="targetGradient16" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ec4899;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:0.8" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="8" cy="8" r="7.68" fill="url(#bgGradient16)" />
+  
+  <!-- Eye shape (ellipse for realistic look) -->
+  <ellipse cx="8" cy="8" 
+           rx="6.24" ry="4.8" 
+           fill="url(#eyeGradient16)" 
+           stroke="#667eea" stroke-width="0.32" />
+  
+  <!-- Iris -->
+  <circle cx="8" cy="8" r="3.84" 
+          fill="#667eea" opacity="0.3" />
+  
+  <!-- Pupil with tracking dot -->
+  <circle cx="8.8" cy="7.52" 
+          r="1.92" fill="url(#pupilGradient16)" />
+  
+  <!-- Light reflection on pupil -->
+  <ellipse cx="7.2" cy="6.72" 
+           rx="0.768" ry="0.576" 
+           fill="white" opacity="0.7" />
+  
+  <!-- Target crosshair overlay -->
+  <g stroke="url(#targetGradient16)" stroke-width="0.24" fill="none" opacity="0.7">
+    <!-- Horizontal line -->
+    <line x1="1.5999999999999996" y1="8" 
+          x2="5.6" y2="8" />
+    <line x1="10.4" y1="8" 
+          x2="14.4" y2="8" />
+    
+    <!-- Vertical line -->
+    <line x1="8" y1="1.5999999999999996" 
+          x2="8" y2="5.6" />
+    <line x1="8" y1="10.4" 
+          x2="8" y2="14.4" />
+    
+    <!-- Target circle -->
+    <circle cx="8" cy="8" r="6.4" 
+            stroke-dasharray="0.8 0.32" />
+  </g>
+  
+  <!-- Recording indicator dot (red dot in corner) -->
+  
+</svg>

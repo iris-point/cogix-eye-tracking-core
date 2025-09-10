@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Icon Generator</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      background: #f0f4ff;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #667eea;
+      text-align: center;
+    }
+    .icons-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+    }
+    .icon-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .icon-preview {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 10px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 150px;
+    }
+    .icon-preview img {
+      image-rendering: crisp-edges;
+    }
+    .download-btn {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    .download-btn:hover {
+      opacity: 0.9;
+    }
+    .download-all {
+      background: #10b981;
+      padding: 15px 30px;
+      font-size: 16px;
+      margin: 30px auto;
+      display: block;
+    }
+    .instructions {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: #92400e;
+    }
+    canvas {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 Cogix Eye Tracking Extension Icons</h1>
+    
+    <div class="instructions">
+      <h3>How to save icons:</h3>
+      <ol>
+        <li>Click "Download PNG" for each icon size</li>
+        <li>Save to: <code>src/assets/icons/</code></li>
+        <li>Or use "Download All" to get a zip file</li>
+      </ol>
+    </div>
+    
+    <button class="download-btn download-all" onclick="downloadAll()">
+      📦 Download All Icons as ZIP
+    </button>
+    
+    <div class="icons-grid">
+      
+        <div class="icon-card">
+          <h3>Icon 16x16</h3>
+          <div class="icon-preview">
+            <div id="svg-16"><?xml version="1.0" encoding="UTF-8"?>
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for depth -->
+    <radialGradient id="bgGradient16">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Eye gradient -->
+    <radialGradient id="eyeGradient16">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#f0f4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Pupil gradient -->
+    <radialGradient id="pupilGradient16" cx="40%" cy="40%">
+      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#334155;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Target crosshair gradient -->
+    <linearGradient id="targetGradient16" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ec4899;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:0.8" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="8" cy="8" r="7.68" fill="url(#bgGradient16)" />
+  
+  <!-- Eye shape (ellipse for realistic look) -->
+  <ellipse cx="8" cy="8" 
+           rx="6.24" ry="4.8" 
+           fill="url(#eyeGradient16)" 
+           stroke="#667eea" stroke-width="0.32" />
+  
+  <!-- Iris -->
+  <circle cx="8" cy="8" r="3.84" 
+          fill="#667eea" opacity="0.3" />
+  
+  <!-- Pupil with tracking dot -->
+  <circle cx="8.8" cy="7.52" 
+          r="1.92" fill="url(#pupilGradient16)" />
+  
+  <!-- Light reflection on pupil -->
+  <ellipse cx="7.2" cy="6.72" 
+           rx="0.768" ry="0.576" 
+           fill="white" opacity="0.7" />
+  
+  <!-- Target crosshair overlay -->
+  <g stroke="url(#targetGradient16)" stroke-width="0.24" fill="none" opacity="0.7">
+    <!-- Horizontal line -->
+    <line x1="1.5999999999999996" y1="8" 
+          x2="5.6" y2="8" />
+    <line x1="10.4" y1="8" 
+          x2="14.4" y2="8" />
+    
+    <!-- Vertical line -->
+    <line x1="8" y1="1.5999999999999996" 
+          x2="8" y2="5.6" />
+    <line x1="8" y1="10.4" 
+          x2="8" y2="14.4" />
+    
+    <!-- Target circle -->
+    <circle cx="8" cy="8" r="6.4" 
+            stroke-dasharray="0.8 0.32" />
+  </g>
+  
+  <!-- Recording indicator dot (red dot in corner) -->
+  
+</svg></div>
+          </div>
+          <canvas id="canvas-16" width="16" height="16"></canvas>
+          <button class="download-btn" onclick="downloadIcon(16)">
+            💾 Download PNG
+          </button>
+          <button class="download-btn" onclick="downloadSVG(16)">
+            📐 Download SVG
+          </button>
+        </div>
+      
+        <div class="icon-card">
+          <h3>Icon 32x32</h3>
+          <div class="icon-preview">
+            <div id="svg-32"><?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for depth -->
+    <radialGradient id="bgGradient32">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Eye gradient -->
+    <radialGradient id="eyeGradient32">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#f0f4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Pupil gradient -->
+    <radialGradient id="pupilGradient32" cx="40%" cy="40%">
+      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#334155;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Target crosshair gradient -->
+    <linearGradient id="targetGradient32" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ec4899;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:0.8" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="15.36" fill="url(#bgGradient32)" />
+  
+  <!-- Eye shape (ellipse for realistic look) -->
+  <ellipse cx="16" cy="16" 
+           rx="12.48" ry="9.6" 
+           fill="url(#eyeGradient32)" 
+           stroke="#667eea" stroke-width="0.64" />
+  
+  <!-- Iris -->
+  <circle cx="16" cy="16" r="7.68" 
+          fill="#667eea" opacity="0.3" />
+  
+  <!-- Pupil with tracking dot -->
+  <circle cx="17.6" cy="15.04" 
+          r="3.84" fill="url(#pupilGradient32)" />
+  
+  <!-- Light reflection on pupil -->
+  <ellipse cx="14.4" cy="13.44" 
+           rx="1.536" ry="1.152" 
+           fill="white" opacity="0.7" />
+  
+  <!-- Target crosshair overlay -->
+  <g stroke="url(#targetGradient32)" stroke-width="0.48" fill="none" opacity="0.7">
+    <!-- Horizontal line -->
+    <line x1="3.1999999999999993" y1="16" 
+          x2="11.2" y2="16" />
+    <line x1="20.8" y1="16" 
+          x2="28.8" y2="16" />
+    
+    <!-- Vertical line -->
+    <line x1="16" y1="3.1999999999999993" 
+          x2="16" y2="11.2" />
+    <line x1="16" y1="20.8" 
+          x2="16" y2="28.8" />
+    
+    <!-- Target circle -->
+    <circle cx="16" cy="16" r="12.8" 
+            stroke-dasharray="1.6 0.64" />
+  </g>
+  
+  <!-- Recording indicator dot (red dot in corner) -->
+  
+</svg></div>
+          </div>
+          <canvas id="canvas-32" width="32" height="32"></canvas>
+          <button class="download-btn" onclick="downloadIcon(32)">
+            💾 Download PNG
+          </button>
+          <button class="download-btn" onclick="downloadSVG(32)">
+            📐 Download SVG
+          </button>
+        </div>
+      
+        <div class="icon-card">
+          <h3>Icon 48x48</h3>
+          <div class="icon-preview">
+            <div id="svg-48"><?xml version="1.0" encoding="UTF-8"?>
+<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for depth -->
+    <radialGradient id="bgGradient48">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Eye gradient -->
+    <radialGradient id="eyeGradient48">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#f0f4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Pupil gradient -->
+    <radialGradient id="pupilGradient48" cx="40%" cy="40%">
+      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#334155;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Target crosshair gradient -->
+    <linearGradient id="targetGradient48" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ec4899;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:0.8" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="24" cy="24" r="23.04" fill="url(#bgGradient48)" />
+  
+  <!-- Eye shape (ellipse for realistic look) -->
+  <ellipse cx="24" cy="24" 
+           rx="18.72" ry="14.399999999999999" 
+           fill="url(#eyeGradient48)" 
+           stroke="#667eea" stroke-width="0.96" />
+  
+  <!-- Iris -->
+  <circle cx="24" cy="24" r="11.52" 
+          fill="#667eea" opacity="0.3" />
+  
+  <!-- Pupil with tracking dot -->
+  <circle cx="26.4" cy="22.56" 
+          r="5.76" fill="url(#pupilGradient48)" />
+  
+  <!-- Light reflection on pupil -->
+  <ellipse cx="21.6" cy="20.16" 
+           rx="2.304" ry="1.728" 
+           fill="white" opacity="0.7" />
+  
+  <!-- Target crosshair overlay -->
+  <g stroke="url(#targetGradient48)" stroke-width="0.72" fill="none" opacity="0.7">
+    <!-- Horizontal line -->
+    <line x1="4.799999999999997" y1="24" 
+          x2="16.8" y2="24" />
+    <line x1="31.2" y1="24" 
+          x2="43.2" y2="24" />
+    
+    <!-- Vertical line -->
+    <line x1="24" y1="4.799999999999997" 
+          x2="24" y2="16.8" />
+    <line x1="24" y1="31.2" 
+          x2="24" y2="43.2" />
+    
+    <!-- Target circle -->
+    <circle cx="24" cy="24" r="19.200000000000003" 
+            stroke-dasharray="2.4000000000000004 0.96" />
+  </g>
+  
+  <!-- Recording indicator dot (red dot in corner) -->
+  
+  <circle cx="38.400000000000006" cy="9.600000000000001" r="3.84" 
+          fill="#ef4444" stroke="white" stroke-width="0.96">
+    <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  
+</svg></div>
+          </div>
+          <canvas id="canvas-48" width="48" height="48"></canvas>
+          <button class="download-btn" onclick="downloadIcon(48)">
+            💾 Download PNG
+          </button>
+          <button class="download-btn" onclick="downloadSVG(48)">
+            📐 Download SVG
+          </button>
+        </div>
+      
+        <div class="icon-card">
+          <h3>Icon 128x128</h3>
+          <div class="icon-preview">
+            <div id="svg-128"><?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for depth -->
+    <radialGradient id="bgGradient128">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Eye gradient -->
+    <radialGradient id="eyeGradient128">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#f0f4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Pupil gradient -->
+    <radialGradient id="pupilGradient128" cx="40%" cy="40%">
+      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#334155;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Target crosshair gradient -->
+    <linearGradient id="targetGradient128" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ec4899;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:0.8" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="61.44" fill="url(#bgGradient128)" />
+  
+  <!-- Eye shape (ellipse for realistic look) -->
+  <ellipse cx="64" cy="64" 
+           rx="49.92" ry="38.4" 
+           fill="url(#eyeGradient128)" 
+           stroke="#667eea" stroke-width="2.56" />
+  
+  <!-- Iris -->
+  <circle cx="64" cy="64" r="30.72" 
+          fill="#667eea" opacity="0.3" />
+  
+  <!-- Pupil with tracking dot -->
+  <circle cx="70.4" cy="60.16" 
+          r="15.36" fill="url(#pupilGradient128)" />
+  
+  <!-- Light reflection on pupil -->
+  <ellipse cx="57.6" cy="53.76" 
+           rx="6.144" ry="4.608" 
+           fill="white" opacity="0.7" />
+  
+  <!-- Target crosshair overlay -->
+  <g stroke="url(#targetGradient128)" stroke-width="1.92" fill="none" opacity="0.7">
+    <!-- Horizontal line -->
+    <line x1="12.799999999999997" y1="64" 
+          x2="44.8" y2="64" />
+    <line x1="83.2" y1="64" 
+          x2="115.2" y2="64" />
+    
+    <!-- Vertical line -->
+    <line x1="64" y1="12.799999999999997" 
+          x2="64" y2="44.8" />
+    <line x1="64" y1="83.2" 
+          x2="64" y2="115.2" />
+    
+    <!-- Target circle -->
+    <circle cx="64" cy="64" r="51.2" 
+            stroke-dasharray="6.4 2.56" />
+  </g>
+  
+  <!-- Recording indicator dot (red dot in corner) -->
+  
+  <circle cx="102.4" cy="25.6" r="10.24" 
+          fill="#ef4444" stroke="white" stroke-width="2.56">
+    <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  
+</svg></div>
+          </div>
+          <canvas id="canvas-128" width="128" height="128"></canvas>
+          <button class="download-btn" onclick="downloadIcon(128)">
+            💾 Download PNG
+          </button>
+          <button class="download-btn" onclick="downloadSVG(128)">
+            📐 Download SVG
+          </button>
+        </div>
+      
+    </div>
+  </div>
+  
+  <script>
+    // Convert SVG to PNG
+    function convertSVGtoPNG(size, callback) {
+      const svgElement = document.querySelector(`#svg-${size} svg`);
+      const svgString = new XMLSerializer().serializeToString(svgElement);
+      const canvas = document.getElementById(`canvas-${size}`);
+      const ctx = canvas.getContext('2d');
+      
+      const img = new Image();
+      const blob = new Blob([svgString], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0, size, size);
+        URL.revokeObjectURL(url);
+        
+        canvas.toBlob(function(blob) {
+          callback(blob);
+        }, 'image/png');
+      };
+      
+      img.src = url;
+    }
+    
+    // Download individual icon
+    function downloadIcon(size) {
+      convertSVGtoPNG(size, function(blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `icon-${size}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+    
+    // Download SVG version
+    function downloadSVG(size) {
+      const svgElement = document.querySelector(`#svg-${size} svg`);
+      const svgString = new XMLSerializer().serializeToString(svgElement);
+      const blob = new Blob([svgString], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `icon-${size}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    // Download all icons as ZIP (requires JSZip library)
+    async function downloadAll() {
+      // For simplicity, we'll download each one separately
+      const sizes = [16, 32, 48, 128];
+      
+      for (const size of sizes) {
+        await new Promise(resolve => {
+          setTimeout(() => {
+            downloadIcon(size);
+            resolve();
+          }, 500);
+        });
+      }
+    }
+    
+    // Auto-generate PNGs on load
+    window.addEventListener('load', () => {
+      const sizes = [16, 32, 48, 128];
+      sizes.forEach(size => {
+        convertSVGtoPNG(size, () => {
+          console.log(`Generated icon-${size}.png`);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
