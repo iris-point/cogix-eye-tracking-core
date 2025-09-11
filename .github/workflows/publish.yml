@@ -1,4 +1,4 @@
-name: Publish SDK and Browser Extension
+name: Publish SDK to NPM
 
 on:
   push:
@@ -53,338 +53,107 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # For manual workflow dispatch
-      - name: Configure Git (Manual)
+      - name: Bump version and publish (Manual)
         if: github.event_name == 'workflow_dispatch'
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-
-      - name: Bump Version (Manual)
-        if: github.event_name == 'workflow_dispatch'
-        id: version
-        run: |
-          npm version ${{ github.event.inputs.version }} -m "chore(release): %s"
-          echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-
-      - name: Publish to npm (Manual)
-        if: github.event_name == 'workflow_dispatch'
-        run: npm publish --access public
+          
+          # Bump version
+          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+          
+          # Get new version
+          VERSION=$(node -p "require('./package.json').version")
+          
+          # Commit and tag
+          git add package.json package-lock.json
+          git commit -m "chore: release v${VERSION}"
+          git tag "v${VERSION}"
+          
+          # Publish to npm
+          npm publish --access public
+          
+          # Push changes
+          git push origin HEAD:main --follow-tags
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      # Setup for GitHub Packages
-      - name: Setup Node for GitHub Packages
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@iris-point'
-          always-auth: true
-
-      # Publish to GitHub Packages
-      - name: Publish to GitHub Packages
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Push changes for manual dispatch
-      - name: Push changes (Manual)
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          git push origin HEAD:main
-          git push origin --tags
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ============================================
-      # Build Browser Extension
-      # ============================================
-      
-      - name: Install Extension dependencies
-        working-directory: ./browser-extension-eyetrack
-        run: npm ci
-      
-      - name: Generate Extension icons
-        working-directory: ./browser-extension-eyetrack
-        run: |
-          npm run generate-icons
-          # Install canvas for PNG generation
-          npm install canvas
-          node scripts/svg-to-png.js
-      
-      - name: Verify SDK dist exists
-        run: |
-          echo "Checking if SDK dist exists..."
-          ls -la dist/
-          echo "SDK cogix-eye-tracking-core.min.js size:"
-          du -h dist/cogix-eye-tracking-core.min.js
-      
-      - name: Update Extension version
-        working-directory: ./browser-extension-eyetrack
-        run: |
-          # Get version from main package.json
-          VERSION=$(node -p "require('../package.json').version")
-          # Update extension package.json
-          npm version $VERSION --no-git-tag-version --allow-same-version
-      
-      - name: Build Extension
-        working-directory: ./browser-extension-eyetrack
-        run: |
-          export NODE_ENV=production
-          npm run build
-          
-          # Update manifest version in dist
-          VERSION=$(node -p "require('../package.json').version")
-          node -e "
-            const fs = require('fs');
-            const manifest = JSON.parse(fs.readFileSync('dist/manifest.json'));
-            manifest.version = '$VERSION';
-            fs.writeFileSync('dist/manifest.json', JSON.stringify(manifest, null, 2));
-          "
-      
-      - name: Create Extension packages
-        working-directory: ./browser-extension-eyetrack
-        run: |
-          VERSION=$(node -p "require('../package.json').version")
-          # Create ZIP
-          cd dist
-          zip -r ../cogix-eye-tracking-extension-v${VERSION}.zip .
-          cd ..
-          cp cogix-eye-tracking-extension-v${VERSION}.zip cogix-eye-tracking-extension.zip
-          
-          # Install crx3 for CRX generation
-          npm install -g crx3
-          
-          # Generate or use existing private key for CRX signing
-          # For CI, we'll generate a consistent key based on a secret or use a stored key
-          if [ -n "${{ secrets.CRX_PRIVATE_KEY }}" ]; then
-            # Use secret if available (base64 encoded)
-            echo "${{ secrets.CRX_PRIVATE_KEY }}" | base64 -d > key.pem
-          else
-            # Generate a new key for this build (less ideal for updates)
-            openssl genrsa -out key.pem 2048
-          fi
-          
-          # Create CRX file with proper format
-          # Note: CRX files from outside Chrome Web Store require special handling
-          crx3 dist -o cogix-eye-tracking-extension-v${VERSION}.crx -k key.pem
-          cp cogix-eye-tracking-extension-v${VERSION}.crx cogix-eye-tracking-extension.crx
-          
-          # Create installation instructions file
-          cat > INSTALLATION.txt << 'EOF'
-          Chrome Extension Installation Instructions
-          ==========================================
-          
-          Due to Chrome security policies, install using one of these methods:
-          
-          METHOD 1: Install from ZIP (Recommended)
-          1. Download cogix-eye-tracking-extension.zip
-          2. Extract to a folder
-          3. Open chrome://extensions/
-          4. Enable "Developer mode"
-          5. Click "Load unpacked" and select the folder
-          
-          METHOD 2: Install CRX with Developer Mode
-          1. Download cogix-eye-tracking-extension.crx
-          2. Open chrome://extensions/
-          3. Enable "Developer mode" FIRST
-          4. Drag the CRX file onto the extensions page
-          
-          METHOD 3: Use Chrome with flags
-          Run Chrome with: --enable-easy-off-store-extension-install
-          
-          Extension ID: bgjkmeddgmjipccn
-          EOF
-          
-          # Clean up key
-          rm -f key.pem
-
-      # ============================================
-      # Create Release Assets
-      # ============================================
-      
       # Create GitHub Release
-      - name: Get version for release
+      # ============================================
+      
+      - name: Get version
         id: get_version
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "version=${{ steps.version.outputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-          fi
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        if: startsWith(github.ref, 'refs/tags/v')
 
-      - name: Create GitHub Release
-        id: create_release
+      - name: Generate checksums
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          npm pack
+          TARBALL="iris-point-eye-tracking-core-${{ steps.get_version.outputs.version }}.tgz"
+          sha256sum ${TARBALL} > checksums.txt
+          echo "Generated checksums for ${TARBALL}"
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/create-release@v1
+        id: create_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', steps.get_version.outputs.version) || github.ref }}
-          release_name: Eye Tracking Core v${{ steps.get_version.outputs.version }}
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
           body: |
-            ## 🎯 Eye Tracking Core v${{ steps.get_version.outputs.version }}
+            # 🎯 Cogix Eye Tracking Core SDK v${{ steps.get_version.outputs.version }}
             
-            This release includes both the Eye Tracking SDK and Browser Extension.
+            ## 📦 Installation
             
-            ### 📦 Eye Tracking SDK
-            
-            #### Install from NPM Registry
             ```bash
             npm install @iris-point/eye-tracking-core@${{ steps.get_version.outputs.version }}
             ```
             
-            #### Install from GitHub Packages
-            ```bash
-            # First, authenticate with GitHub Packages
-            npm login --scope=@iris-point --auth-type=legacy --registry=https://npm.pkg.github.com
+            ## ✨ What's New
+            - See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details
             
-            # Then install
-            npm install @iris-point/eye-tracking-core@${{ steps.get_version.outputs.version }} --registry=https://npm.pkg.github.com
-            ```
+            ## 📊 Features
+            - Hardware eye tracker support (via WebSocket)
+            - WebGazer webcam-based tracking
+            - React components and hooks
+            - Real-time analysis and visualization
+            - AOI detection and monitoring
+            - jsPsych plugin support
             
-            #### CDN Links
-            ```html
-            <!-- unpkg -->
-            <script src="https://unpkg.com/@iris-point/eye-tracking-core@${{ steps.get_version.outputs.version }}/dist/cogix-eye-tracking-core.min.js"></script>
+            ## 📚 Documentation
+            - [API Documentation](https://github.com/${{ github.repository }}#readme)
+            - [Examples](https://github.com/${{ github.repository }}/tree/main/examples)
             
-            <!-- jsDelivr -->
-            <script src="https://cdn.jsdelivr.net/npm/@iris-point/eye-tracking-core@${{ steps.get_version.outputs.version }}/dist/cogix-eye-tracking-core.min.js"></script>
-            ```
-            
-            ### 🌐 Browser Extension
-            
-            **Extension ID**: `bgjkmeddgmjipccn`
-            
-            #### 📥 Direct Download Links
-            - **ZIP File (Recommended)**: [`cogix-eye-tracking-extension.zip`](https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.zip)
-            - **CRX File**: [`cogix-eye-tracking-extension.crx`](https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.crx)
-            
-            #### Method 1: Install from ZIP (Recommended) ✅
-            1. Download [`cogix-eye-tracking-extension.zip`](https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.zip)
-            2. Extract the ZIP file to a folder
-            3. Open Chrome and navigate to `chrome://extensions/`
-            4. Enable "Developer mode" (top right)
-            5. Click "Load unpacked" and select the extracted folder
-            
-            #### Method 2: Install CRX (Advanced)
-            > ⚠️ **Note**: Chrome may show "CRX_REQUIRED_PROOF_MISSING" error. This is normal for extensions not from Chrome Web Store.
-            
-            1. Download [`cogix-eye-tracking-extension.crx`](https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.crx)
-            2. Open Chrome and navigate to `chrome://extensions/`
-            3. **IMPORTANT**: Enable "Developer mode" FIRST
-            4. Drag and drop the CRX file directly onto the extensions page
-            
-            #### Method 3: Quick Install Commands
-            
-            **Quick Install (Windows)**
-            ```powershell
-            iwr -Uri https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.zip -OutFile extension.zip
-            Expand-Archive extension.zip -DestinationPath cogix-extension
-            # Then load cogix-extension folder in Chrome
-            ```
-            
-            **Quick Install (Mac/Linux)**
-            ```bash
-            curl -L https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.version }}/cogix-eye-tracking-extension.zip -o extension.zip
-            unzip extension.zip -d cogix-extension
-            # Then load cogix-extension folder in Chrome
-            ```
-            
-            **Manual Installation**
-            1. Download `cogix-eye-tracking-extension.zip` from the assets below
-            2. Extract the ZIP file
-            3. Open Chrome → `chrome://extensions/`
-            4. Enable "Developer mode"
-            5. Click "Load unpacked" and select the extracted folder
-            
-            ### 🔗 Permanent Download URLs
-            
-            Always get the latest version:
-            ```bash
-            # Latest CRX (direct link)
-            https://github.com/${{ github.repository }}/releases/latest/download/cogix-eye-tracking-extension.crx
-            
-            # Latest ZIP (direct link)
-            https://github.com/${{ github.repository }}/releases/latest/download/cogix-eye-tracking-extension.zip
-            ```
-            
-            ### 📋 Links
+            ## 🔗 Links
             - [NPM Package](https://www.npmjs.com/package/@iris-point/eye-tracking-core)
-            - [GitHub Package](https://github.com/${{ github.repository }}/packages)
-            - [Documentation](https://github.com/${{ github.repository }})
-            - [All Releases](https://github.com/${{ github.repository }}/releases)
-          draft: false
-          prerelease: false
-      
-      # Upload Browser Extension to Release
-      - name: Upload Extension ZIP
+            - [GitHub Repository](https://github.com/${{ github.repository }})
+
+      # Upload SDK Package to Release
+      - name: Upload SDK Package
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./browser-extension-eyetrack/cogix-eye-tracking-extension.zip
-          asset_name: cogix-eye-tracking-extension.zip
-          asset_content_type: application/zip
-      
-      - name: Upload Extension ZIP (versioned)
+          asset_path: ./iris-point-eye-tracking-core-${{ steps.get_version.outputs.version }}.tgz
+          asset_name: iris-point-eye-tracking-core-${{ steps.get_version.outputs.version }}.tgz
+          asset_content_type: application/gzip
+
+      - name: Upload Checksums
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./browser-extension-eyetrack/cogix-eye-tracking-extension-v${{ steps.get_version.outputs.version }}.zip
-          asset_name: cogix-eye-tracking-extension-v${{ steps.get_version.outputs.version }}.zip
-          asset_content_type: application/zip
-      
-      - name: Upload Extension CRX
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./browser-extension-eyetrack/cogix-eye-tracking-extension.crx
-          asset_name: cogix-eye-tracking-extension.crx
-          asset_content_type: application/x-chrome-extension
-      
-      - name: Upload Extension CRX (versioned)
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./browser-extension-eyetrack/cogix-eye-tracking-extension-v${{ steps.get_version.outputs.version }}.crx
-          asset_name: cogix-eye-tracking-extension-v${{ steps.get_version.outputs.version }}.crx
-          asset_content_type: application/x-chrome-extension
-      
-      # ============================================
-      # Optional: Deploy Extension to GitHub Pages
-      # ============================================
-      
-      - name: Prepare GitHub Pages
-        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
-        run: |
-          mkdir -p gh-pages
-          
-          # Copy extension
-          cp browser-extension-eyetrack/cogix-eye-tracking-extension.zip gh-pages/
-          
-          # Copy installation scripts if they exist
-          [ -f browser-extension-eyetrack/scripts/install.sh ] && cp browser-extension-eyetrack/scripts/install.sh gh-pages/
-          [ -f browser-extension-eyetrack/scripts/install.ps1 ] && cp browser-extension-eyetrack/scripts/install.ps1 gh-pages/
-          
-          # Copy or create index.html
-          if [ -f browser-extension-eyetrack/docs/index.html ]; then
-            cp browser-extension-eyetrack/docs/index.html gh-pages/
-            # Update version in index.html
-            sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v${{ steps.get_version.outputs.version }}/g" gh-pages/index.html || true
-          fi
-          
-          # Create manifest.json for version checking
-          echo "{\"version\": \"${{ steps.get_version.outputs.version }}\"}" > gh-pages/manifest.json
-      
-      - name: Deploy to GitHub Pages
-        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./gh-pages
-          keep_files: true
+          asset_path: ./checksums.txt
+          asset_name: checksums.txt
+          asset_content_type: text/plain

@@ -1,9 +1,8 @@
-# 🚀 Release Guide - Eye Tracking Core
+# 🚀 Release Guide - Eye Tracking Core SDK
 
-This repository contains **two main packages** that are released together:
+This repository contains the **Eye Tracking Core SDK** for developers.
 
-1. **Eye Tracking SDK** (`@iris-point/eye-tracking`) - NPM package for developers
-2. **Browser Extension** (`cogix-eye-tracking-extension`) - Chrome extension for end users
+**Eye Tracking SDK** (`@iris-point/eye-tracking-core`) - NPM package for developers
 
 ## 📦 Package Structure
 
@@ -11,29 +10,28 @@ This repository contains **two main packages** that are released together:
 cogix-eye-tracking-core/
 ├── src/                    # SDK source code
 ├── dist/                   # SDK build output
-├── browser-extension-eyetrack/   # Browser extension
-│   ├── src/               # Extension source
-│   └── dist/              # Extension build output
+├── examples/               # Example implementations
+├── jspsych-plugin/         # jsPsych plugin files
+├── jspsych-extension/      # jsPsych extension files
 └── scripts/               # Release automation
 ```
 
-## 🎯 Unified Release Process
+## 🎯 Release Process
 
 ### Quick Release (Recommended)
 
-Use the unified release script to release both packages with the same version:
+Use the release script to build and prepare the SDK package:
 
 ```bash
 # From root directory
-npm run release:all
+node scripts/release-all.js
 
 # This will:
 # 1. Prompt for version bump type (patch/minor/major)
 # 2. Build and validate SDK
-# 3. Build browser extension
-# 4. Create release packages
-# 5. Generate checksums
-# 6. Prepare release notes
+# 3. Create release package
+# 4. Generate checksums
+# 5. Prepare release notes
 ```
 
 ### Manual Release Steps
@@ -41,16 +39,15 @@ npm run release:all
 If you need more control:
 
 ```bash
-# 1. Update versions manually
+# 1. Update version manually
 npm version patch  # or minor/major
 
 # 2. Build SDK
 npm run build
 npm run validate
 
-# 3. Build Extension
-cd browser-extension-eyetrack
-npm run prepare-release
+# 3. Create package
+npm pack
 
 # 4. Create and push tag
 git add .
@@ -63,36 +60,26 @@ git push origin main --tags
 
 When you push a version tag (`v*`), GitHub Actions automatically:
 
-1. **Builds both packages**
-   - SDK npm package (.tgz)
-   - Browser extension (.zip)
+1. **Builds SDK package**
+   - Validates TypeScript
+   - Creates npm package (.tgz)
 
 2. **Creates GitHub Release**
    - Uploads SDK package
-   - Uploads extension ZIP
    - Generates release notes
    - Provides installation instructions
 
 3. **Publishes to NPM** (if NPM_TOKEN is set)
-   - Publishes `@iris-point/eye-tracking`
-
-4. **Deploys to GitHub Pages**
-   - Hosts extension download page
-   - Provides installation scripts
+   - Publishes `@iris-point/eye-tracking-core`
 
 ## 📊 Release Artifacts
 
 Each release includes:
 
 ### SDK Package
-- **NPM**: `@iris-point/eye-tracking@VERSION`
-- **File**: `eye-tracking-sdk-vVERSION.tgz`
-- **Install**: `npm install @iris-point/eye-tracking@VERSION`
-
-### Browser Extension
-- **ZIP**: `cogix-eye-tracking-extension-vVERSION.zip`
-- **Latest**: `cogix-eye-tracking-extension.zip`
-- **Install**: Manual Chrome installation or automated scripts
+- **NPM**: `@iris-point/eye-tracking-core@VERSION`
+- **File**: `iris-point-eye-tracking-core-VERSION.tgz`
+- **Install**: `npm install @iris-point/eye-tracking-core@VERSION`
 
 ### Documentation
 - `checksums.txt` - SHA256 verification
@@ -100,173 +87,156 @@ Each release includes:
 
 ## 🌐 Distribution Channels
 
-### 1. NPM Registry (SDK)
+### 1. NPM Registry
 ```bash
-npm install @iris-point/eye-tracking
+npm install @iris-point/eye-tracking-core
 # or specific version
-npm install @iris-point/eye-tracking@1.0.5
+npm install @iris-point/eye-tracking-core@1.0.5
 ```
 
-### 2. GitHub Releases (Both)
-- Latest: https://github.com/cogix/cogix-eye-tracking-core/releases/latest
-- All releases: https://github.com/cogix/cogix-eye-tracking-core/releases
+### 2. GitHub Releases
+- Latest: https://github.com/iris-point/cogix-eye-tracking-core/releases/latest
+- All releases: https://github.com/iris-point/cogix-eye-tracking-core/releases
 
-### 3. GitHub Pages (Extension)
-- Landing page: https://cogix.github.io/cogix-eye-tracking-core/
-- Direct download: https://cogix.github.io/cogix-eye-tracking-core/cogix-eye-tracking-extension.zip
+### 3. CDN Access
 
-### 4. CDN Access
-
-#### SDK via unpkg
+#### Via unpkg
 ```html
-<script src="https://unpkg.com/@iris-point/eye-tracking@latest"></script>
+<script src="https://unpkg.com/@iris-point/eye-tracking-core@latest"></script>
 ```
 
-#### SDK via jsDelivr
+#### Via jsDelivr
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@iris-point/eye-tracking@latest"></script>
-```
-
-#### Extension via GitHub
-```bash
-# Latest extension
-curl -L https://github.com/cogix/cogix-eye-tracking-core/releases/latest/download/cogix-eye-tracking-extension.zip
+<script src="https://cdn.jsdelivr.net/npm/@iris-point/eye-tracking-core@latest"></script>
 ```
 
 ## 🔧 Version Management
 
 ### Semantic Versioning
-Both packages use synchronized versions:
 - **Major** (X.0.0): Breaking changes
-- **Minor** (1.X.0): New features
+- **Minor** (1.X.0): New features (backward compatible)
 - **Patch** (1.0.X): Bug fixes
 
-### Version Bump Commands
+### Version Commands
 ```bash
-# Patch release (1.0.0 -> 1.0.1)
-npm run release:patch
+# Automated version bump
+npm run release:patch   # 1.0.0 → 1.0.1
+npm run release:minor   # 1.0.0 → 1.1.0
+npm run release:major   # 1.0.0 → 2.0.0
 
-# Minor release (1.0.0 -> 1.1.0)
-npm run release:minor
-
-# Major release (1.0.0 -> 2.0.0)
-npm run release:major
-
-# Pre-release versions
-npm run release:alpha  # 1.0.0-alpha.0
-npm run release:beta   # 1.0.0-beta.0
+# Manual version
+npm version 1.2.3 --no-git-tag-version
 ```
 
-## 📝 Release Checklist
+## 📋 Release Checklist
 
-Before releasing:
-
-- [ ] All tests pass
+### Pre-Release
+- [ ] All tests passing
 - [ ] Documentation updated
 - [ ] CHANGELOG.md updated
-- [ ] Browser extension tested in Chrome
-- [ ] SDK examples work correctly
-- [ ] Version numbers synchronized
+- [ ] Examples tested
 
-During release:
+### SDK
+- [ ] Version bumped in package.json
+- [ ] Build successful (`npm run build`)
+- [ ] TypeScript validation (`npm run validate`)
+- [ ] Package created (`npm pack`)
+- [ ] Local testing successful
+- [ ] React components work
+- [ ] WebSocket connection works
+- [ ] WebGazer integration works
+- [ ] jsPsych plugins work
 
-- [ ] Run `npm run release:all`
-- [ ] Review generated release notes
-- [ ] Edit RELEASE_NOTES.md with actual changes
-- [ ] Commit all changes
-- [ ] Push tag to trigger GitHub Actions
+### Post-Release
+- [ ] GitHub Release created
+- [ ] NPM package published
+- [ ] Documentation updated
+- [ ] Dependent projects notified
 
-After release:
+## 🆘 Troubleshooting
 
-- [ ] Verify GitHub Release created
-- [ ] Check NPM package published
-- [ ] Test extension download from GitHub Pages
-- [ ] Announce release if needed
-
-## 🔐 Security & Keys
-
-### NPM Publishing
-Set `NPM_TOKEN` in GitHub Secrets for automated publishing:
-1. Go to npmjs.com → Account Settings → Access Tokens
-2. Generate automation token
-3. Add to GitHub repo: Settings → Secrets → New repository secret
-4. Name: `NPM_TOKEN`, Value: your token
-
-### Extension Signing
-For CRX generation (optional):
-```bash
-# Generate key pair
-openssl genrsa -out key.pem 2048
-openssl rsa -in key.pem -pubout -out key.pub
-
-# Keep key.pem private!
-```
-
-## 🚨 Troubleshooting
-
-### Build Failures
+### Build Issues
 ```bash
 # Clean and rebuild
-npm run clean
-rm -rf node_modules package-lock.json
+rm -rf dist node_modules package-lock.json
 npm install
 npm run build
 ```
 
-### Version Mismatch
+### NPM Publishing Issues
 ```bash
-# Sync versions manually
-cd browser-extension-eyetrack
-npm version 1.0.5 --no-git-tag-version
-cd ..
-npm version 1.0.5 --no-git-tag-version
+# Check npm login
+npm whoami
+
+# Verify package before publishing
+npm pack --dry-run
+
+# Manual publish with debug
+npm publish --access public --verbose
 ```
 
-### Failed GitHub Actions
-- Check Actions tab for error logs
-- Ensure NPM_TOKEN is set correctly
-- Verify tag format is `v*` (e.g., v1.0.5)
+### Version Conflicts
+```bash
+# Reset to git tag version
+npm version $(git describe --tags --abbrev=0) --no-git-tag-version --allow-same-version
+```
 
-## 📊 Usage Analytics
+## 🔄 Rollback Process
 
-Track adoption:
-- **NPM**: https://www.npmjs.com/package/@iris-point/eye-tracking
-- **GitHub**: Insights → Traffic → Popular content
-- **Extension**: GitHub Release download counts
+If a release has issues:
 
-## 🔄 Rollback Procedure
+### NPM Package
+```bash
+# Deprecate bad version
+npm deprecate @iris-point/eye-tracking-core@1.2.3 "Contains critical bug"
 
-If issues are found after release:
+# Publish patch
+npm version patch
+npm publish
+```
 
-1. **NPM Package**:
-   ```bash
-   npm deprecate @iris-point/eye-tracking@VERSION "Critical bug found"
-   npm publish --tag previous  # Publish previous version as latest
-   ```
+### Git Tags
+```bash
+# Delete local tag
+git tag -d v1.2.3
 
-2. **Browser Extension**:
-   - Delete problematic release from GitHub
-   - Re-run previous release workflow
-   - Update GitHub Pages with previous version
+# Delete remote tag
+git push origin :refs/tags/v1.2.3
+```
 
-3. **Hotfix**:
-   ```bash
-   git checkout -b hotfix/v1.0.6
-   # Fix issues
-   npm run release:all  # Choose patch
-   ```
+## 🎯 Complete Release Example
+
+```bash
+# 1. Start release process
+node scripts/release-all.js
+# Choose: patch/minor/major
+# Confirm version
+
+# 2. Script automatically:
+# - Updates version
+# - Builds SDK
+# - Creates package
+# - Generates checksums
+
+# 3. Review and edit RELEASE_NOTES.md
+
+# 4. Commit and tag
+git add .
+git commit -m "Release v1.2.3"
+git tag v1.2.3
+
+# 5. Push to GitHub
+git push origin main --tags
+
+# 6. GitHub Actions will:
+# - Create release
+# - Publish to NPM
+# - Upload assets
+```
 
 ## 📚 Additional Resources
 
-- [NPM Publishing Docs](https://docs.npmjs.com/cli/v8/commands/npm-publish)
-- [Chrome Extension Distribution](https://developer.chrome.com/docs/extensions/mv3/hosting/)
-- [GitHub Releases API](https://docs.github.com/en/rest/releases)
-- [Semantic Versioning](https://semver.org/)
-
-## 🤝 Release Responsibilities
-
-- **SDK Changes**: Core eye tracking functionality
-- **Extension Changes**: Browser integration, UI
-- **Both**: Version bumps, release notes, testing
-
-Remember: Both packages are released together to ensure compatibility!
+- [NPM Package](https://www.npmjs.com/package/@iris-point/eye-tracking-core)
+- [GitHub Repository](https://github.com/iris-point/cogix-eye-tracking-core)
+- [API Documentation](https://github.com/iris-point/cogix-eye-tracking-core#readme)
+- [Examples](https://github.com/iris-point/cogix-eye-tracking-core/tree/main/examples)

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Unified release script for Eye Tracking Core
- * Releases both the SDK npm package and Browser Extension
+ * Release script for Eye Tracking Core SDK
+ * Handles npm package release
  */
 
 import fs from 'fs';
@@ -13,7 +13,6 @@ import readline from 'readline';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, '..');
-const extensionDir = path.join(rootDir, 'browser-extension-eyetrack');
 
 // Colors for console output
 const colors = {
@@ -62,16 +61,14 @@ function question(prompt) {
 }
 
 async function main() {
-  log('\n🚀 Unified Release for Cogix Eye Tracking Core\n', 'bright');
-  log('This will release both the SDK package and Browser Extension\n', 'yellow');
+  log('\n🚀 Release for Cogix Eye Tracking Core SDK\n', 'bright');
+  log('This will release the SDK npm package\n', 'yellow');
   
-  // 1. Check current versions
-  const sdkPackageJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
-  const extPackageJson = JSON.parse(fs.readFileSync(path.join(extensionDir, 'package.json'), 'utf8'));
+  // 1. Check current version
+  const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
   
-  log('Current versions:', 'cyan');
-  log(`  SDK: ${sdkPackageJson.version}`);
-  log(`  Extension: ${extPackageJson.version}`);
+  log('Current version:', 'cyan');
+  log(`  SDK: ${packageJson.version}`);
   log('');
   
   // 2. Ask for version bump type
@@ -83,7 +80,7 @@ async function main() {
   }
   
   // 3. Calculate new version
-  const versionParts = sdkPackageJson.version.split('.').map(Number);
+  const versionParts = packageJson.version.split('.').map(Number);
   if (bumpType === 'patch') versionParts[2]++;
   else if (bumpType === 'minor') { versionParts[1]++; versionParts[2] = 0; }
   else if (bumpType === 'major') { versionParts[0]++; versionParts[1] = 0; versionParts[2] = 0; }
@@ -106,10 +103,10 @@ async function main() {
   
   // 5. Update SDK version
   log('📝 Updating SDK version...', 'yellow');
-  sdkPackageJson.version = newVersion;
+  packageJson.version = newVersion;
   fs.writeFileSync(
     path.join(rootDir, 'package.json'),
-    JSON.stringify(sdkPackageJson, null, 2) + '\n'
+    JSON.stringify(packageJson, null, 2) + '\n'
   );
   
   // 6. Build SDK
@@ -123,118 +120,43 @@ async function main() {
   // 8. Pack SDK
   log('\n📦 Packing SDK...', 'yellow');
   exec('npm pack', { cwd: rootDir });
-  const sdkTarball = `iris-point-eye-tracking-${newVersion}.tgz`;
-  
-  log('\n========================================', 'cyan');
-  log('       Building Browser Extension', 'bright');
-  log('========================================\n', 'cyan');
-  
-  // 9. Update Extension version
-  log('📝 Updating Extension version...', 'yellow');
-  extPackageJson.version = newVersion;
-  fs.writeFileSync(
-    path.join(extensionDir, 'package.json'),
-    JSON.stringify(extPackageJson, null, 2) + '\n'
-  );
-  
-  // 10. Clean extension build
-  log('\n🧹 Cleaning previous extension build...', 'yellow');
-  if (fs.existsSync(path.join(extensionDir, 'dist'))) {
-    fs.rmSync(path.join(extensionDir, 'dist'), { recursive: true, force: true });
-  }
-  
-  // 11. Generate icons
-  log('\n🎨 Generating extension icons...', 'yellow');
-  exec('npm run generate-icons', { cwd: extensionDir });
-  exec('node scripts/svg-to-png.js', { cwd: extensionDir });
-  
-  // 12. Build extension
-  log('\n🔨 Building extension...', 'yellow');
-  const env = { ...process.env, NODE_ENV: 'production' };
-  exec('npm run build', { cwd: extensionDir, env });
-  
-  // 13. Update manifest version
-  log('\n📝 Updating manifest version...', 'yellow');
-  const manifestPath = path.join(extensionDir, 'dist', 'manifest.json');
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  manifest.version = newVersion;
-  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-  
-  // 14. Create extension ZIP
-  log('\n📦 Creating extension ZIP...', 'yellow');
-  const zipName = `cogix-eye-tracking-extension-v${newVersion}.zip`;
-  
-  if (process.platform === 'win32') {
-    exec(`cd dist && tar -a -c -f ../${zipName} *`, { cwd: extensionDir });
-  } else {
-    exec(`cd dist && zip -r ../${zipName} .`, { cwd: extensionDir });
-  }
-  
-  // Copy to generic name
-  fs.copyFileSync(
-    path.join(extensionDir, zipName),
-    path.join(extensionDir, 'cogix-eye-tracking-extension.zip')
-  );
+  const sdkTarball = `iris-point-eye-tracking-core-${newVersion}.tgz`;
   
   log('\n========================================', 'cyan');
   log('         Finalizing Release', 'bright');
   log('========================================\n', 'cyan');
   
-  // 15. Generate checksums
+  // 9. Generate checksums
   log('🔐 Generating checksums...', 'yellow');
   const crypto = await import('crypto');
   
   const sdkBuffer = fs.readFileSync(path.join(rootDir, sdkTarball));
   const sdkChecksum = crypto.createHash('sha256').update(sdkBuffer).digest('hex');
   
-  const zipBuffer = fs.readFileSync(path.join(extensionDir, zipName));
-  const zipChecksum = crypto.createHash('sha256').update(zipBuffer).digest('hex');
-  
   const checksumContent = `SHA256 Checksums for v${newVersion}:\n\n` +
     `SDK Package:\n` +
-    `${sdkChecksum}  ${sdkTarball}\n\n` +
-    `Browser Extension:\n` +
-    `${zipChecksum}  ${zipName}\n` +
-    `${zipChecksum}  cogix-eye-tracking-extension.zip\n`;
+    `${sdkChecksum}  ${sdkTarball}\n`;
   
   fs.writeFileSync(path.join(rootDir, 'checksums.txt'), checksumContent);
   
-  // 16. Create release notes template
+  // 10. Create release notes template
   log('\n📝 Creating release notes...', 'yellow');
   const releaseNotes = `# Release v${newVersion}
 
-## 🎯 Cogix Eye Tracking Core
+## 🎯 Cogix Eye Tracking Core SDK
 
-This release includes both the Eye Tracking SDK and Browser Extension.
-
-### 📦 Eye Tracking SDK
-
-#### Installation
+### 📦 Installation
 \`\`\`bash
-npm install @iris-point/eye-tracking@${newVersion}
+npm install @iris-point/eye-tracking-core@${newVersion}
 \`\`\`
 
-#### Key Features
+### Key Features
 - Hardware eye tracker support (via WebSocket)
 - WebGazer webcam-based tracking
 - React components and hooks
 - Real-time analysis and visualization
 - AOI detection and monitoring
-
-### 🌐 Browser Extension
-
-#### Installation
-1. Download \`cogix-eye-tracking-extension-v${newVersion}.zip\`
-2. Extract the ZIP file
-3. Open Chrome → \`chrome://extensions/\`
-4. Enable "Developer mode"
-5. Click "Load unpacked" and select the extracted folder
-
-#### Features
-- Screen recording with eye tracking overlay
-- Fullscreen calibration
-- Cogix platform integration
-- Automatic data submission
+- jsPsych plugin support
 
 ### ✨ What's New
 - [Add new features here]
@@ -249,27 +171,23 @@ npm install @iris-point/eye-tracking@${newVersion}
 If upgrading from a previous version:
 \`\`\`javascript
 // Update your imports if needed
-import { EyeTrackingSDK } from '@iris-point/eye-tracking';
+import { EyeTrackingSDK } from '@iris-point/eye-tracking-core';
 \`\`\`
 
 ### Checksums
 \`\`\`
 ${sdkChecksum}  ${sdkTarball}
-${zipChecksum}  ${zipName}
 \`\`\`
 `;
   
   fs.writeFileSync(path.join(rootDir, 'RELEASE_NOTES.md'), releaseNotes);
   
-  // 17. Summary
+  // 11. Summary
   log('\n✅ Release preparation complete!\n', 'green');
   
-  log('📦 Packages created:', 'bright');
+  log('📦 Package created:', 'bright');
   log(`  SDK Package:`, 'cyan');
   log(`    • ${sdkTarball}`, 'blue');
-  log(`  Browser Extension:`, 'cyan');
-  log(`    • ${zipName}`, 'blue');
-  log(`    • cogix-eye-tracking-extension.zip`, 'blue');
   log(`  Documentation:`, 'cyan');
   log(`    • checksums.txt`, 'blue');
   log(`    • RELEASE_NOTES.md`, 'blue');
@@ -283,9 +201,8 @@ ${zipChecksum}  ${zipName}
   log(`     git tag v${newVersion}`, 'cyan');
   log(`     git push origin main --tags`, 'cyan');
   log('  4. GitHub Actions will automatically:', 'yellow');
-  log('     • Create GitHub Release with both packages', 'blue');
+  log('     • Create GitHub Release with SDK package', 'blue');
   log('     • Publish SDK to NPM (if NPM_TOKEN is set)', 'blue');
-  log('     • Deploy extension to GitHub Pages', 'blue');
   
   log('\n🚀 Release v' + newVersion + ' is ready!', 'green');
 }
