@@ -428,8 +428,9 @@ export class EyeTracker extends EventEmitter<EventMap> {
 
       // Handle camera image - matches raw example line 380-387
       if (jsonIris.bg_img) {
-        this.log('Emitting camera frame, image data length:', jsonIris.bg_img.length)
-        this.log('First 100 chars of image data:', jsonIris.bg_img.substring(0, 100))
+        // Disabled verbose camera frame logging to reduce console noise
+        // this.log('Emitting camera frame, image data length:', jsonIris.bg_img.length)
+        // this.log('First 100 chars of image data:', jsonIris.bg_img.substring(0, 100))
         
         this.emit('cameraFrame', {
           imageData: jsonIris.bg_img,
