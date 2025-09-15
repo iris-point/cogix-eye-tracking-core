@@ -288,18 +288,22 @@ export class EyeTracker extends EventEmitter<EventMap> {
 
   /**
    * Start calibration - matches raw example initCalibration()
+   * This properly implements the sequence from the raw example:
+   * 1. Show point (movePoint)
+   * 2. Wait for user to look at it (delay3s)
+   * 3. Send calibration command
    */
-  startCalibration(): void {
+  async startCalibration(): Promise<void> {
     if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
       throw new Error('Not connected')
     }
 
     this.isCalibrating = true
     this.calibrationStep = 0
-    
+
     this.setStatus(DeviceStatus.CALIBRATING)
     this.emit('calibrationStarted', { points: 5 })
-    
+
     // Show first calibration point immediately (matches raw line 446)
     // The UI will display the first point (0-based index)
     this.emit('calibrationProgress', {
@@ -307,11 +311,19 @@ export class EyeTracker extends EventEmitter<EventMap> {
       total: 5
     })
 
-    // Then wait 3 seconds before sending the command (matches raw line 447-450)
+    // Wait 3 seconds for user to look at the point (matches raw line 447)
+    await this.delay(3000)
+
+    // Then send the calibration command (matches raw line 449-450)
     const firstPoint = this.calibrationPoints[0]
-    setTimeout(() => {
-      this.sendCommand(createCalibrationCommand(firstPoint.x, firstPoint.y))
-    }, 3000)
+    this.sendCommand(createCalibrationCommand(firstPoint.x, firstPoint.y))
+  }
+
+  /**
+   * Helper delay function matching raw example's delay/delay3s functions
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 
   /**
@@ -337,17 +349,24 @@ export class EyeTracker extends EventEmitter<EventMap> {
       // Handle calibration progress - matches raw example line 313-335
       if (jsonIris.nFinishedNum !== undefined) {
         this.log('Finish checked!', jsonIris.nFinishedNum)
-        
+
+        // The sequence from raw example (lines 317-321):
+        // 1. movePoint() - show the next point position
+        // 2. delay3s() - wait for user to look at it
+        // 3. eyeCalibration() - send calibration command
+
         // Emit progress for the NEXT point that will be shown
         // jsonIris.nFinishedNum is 1-based: 1 means first point finished, show second point
         if (jsonIris.nFinishedNum < 5) {
+          // Step 1: Show the next point immediately
           this.emit('calibrationProgress', {
             current: jsonIris.nFinishedNum,  // This becomes the index for the next point (0-based)
             total: 5
           })
         }
 
-        // Send next calibration point after delay
+        // Step 2 & 3: Wait 3 seconds then send calibration command
+        // This is handled in sendNextCalibrationPoint
         this.sendNextCalibrationPoint(jsonIris.nFinishedNum)
 
         if (jsonIris.nFinishedNum === 5) {
@@ -487,47 +506,83 @@ export class EyeTracker extends EventEmitter<EventMap> {
   /**
    * Send next calibration point - matches raw example eyeCalibration()
    * finishedNum is 1-based (from device), matching the raw example
+   *
+   * IMPORTANT: The sequence must be:
+   * 1. First show/move the point (via calibrationProgress event) - done in handleMessage
+   * 2. Wait for user to look at it (3 seconds)
+   * 3. Then send the calibration command
    */
-  private sendNextCalibrationPoint(finishedNum: number): void {
-    // Move to next point and send command
-    // finishedNum is 1-based: 1 means first point finished, send second point
-    switch (finishedNum) {
-      case 1:
-        // First point finished, send second point - matches raw example line 514-519
-        setTimeout(() => {
-          const point = this.calibrationPoints[1]
-          this.sendCommand(createCalibrationCommand(point.x, point.y))
-        }, 3000)
-        break
-      
-      case 2:
-        // Second point finished, send third point - matches raw example line 525-528
-        setTimeout(() => {
-          const point = this.calibrationPoints[2]
-          this.sendCommand(createCalibrationCommand(point.x, point.y))
-        }, 3000)
-        break
-      
-      case 3:
-        // Third point finished, send fourth point - matches raw example line 531-535
-        setTimeout(() => {
-          const point = this.calibrationPoints[3]
-          this.sendCommand(createCalibrationCommand(point.x, point.y))
-        }, 3000)
-        break
-      
-      case 4:
-        // Fourth point finished, send fifth point - matches raw example line 538-542
-        setTimeout(() => {
-          const point = this.calibrationPoints[4]
-          this.sendCommand(createCalibrationCommand(point.x, point.y))
-        }, 3000)
-        break
-      
-      case 5:
-        // Fifth point finished, calibration complete
-        // checkCalibration command is sent in handleMessage
-        break
+  private async sendNextCalibrationPoint(finishedNum: number): Promise<void> {
+    // finishedNum is 1-based: 1 means first point finished, now handle second point
+    // The calibrationProgress event has already been emitted in handleMessage
+    // which causes the UI to show the next point immediately
+
+    if (finishedNum >= 1 && finishedNum <= 4) {
+      // Wait 3 seconds for user to look at the new point
+      await this.delay(3000)
+
+      // Then send the calibration command for the current point
+      // finishedNum=1 means we're now on point index 1 (second point)
+      const point = this.calibrationPoints[finishedNum]
+      this.sendCommand(createCalibrationCommand(point.x, point.y))
+    }
+    // When finishedNum=5, calibration is complete
+    // checkCalibration command is sent in handleMessage
+  }
+
+  /**
+   * High-level calibrate method that handles the full calibration process
+   * Returns a promise that resolves when calibration is complete
+   */
+  calibrate(): Promise<CalibrationResult> {
+    return new Promise(async (resolve, reject) => {
+      // Setup listeners for calibration completion
+      const completeHandler = (result: CalibrationResult) => {
+        this.off('calibrationComplete', completeHandler)
+        this.off('calibrationCancelled', cancelHandler)
+        this.off('error', errorHandler)
+        resolve(result)
+      }
+
+      const cancelHandler = () => {
+        this.off('calibrationComplete', completeHandler)
+        this.off('calibrationCancelled', cancelHandler)
+        this.off('error', errorHandler)
+        reject(new Error('Calibration cancelled'))
+      }
+
+      const errorHandler = (error: Error) => {
+        this.off('calibrationComplete', completeHandler)
+        this.off('calibrationCancelled', cancelHandler)
+        this.off('error', errorHandler)
+        reject(error)
+      }
+
+      this.once('calibrationComplete', completeHandler)
+      this.once('calibrationCancelled', cancelHandler)
+      this.once('error', errorHandler)
+
+      // Start the calibration process
+      try {
+        await this.startCalibration()
+      } catch (error) {
+        this.off('calibrationComplete', completeHandler)
+        this.off('calibrationCancelled', cancelHandler)
+        this.off('error', errorHandler)
+        reject(error)
+      }
+    })
+  }
+
+  /**
+   * Cancel ongoing calibration
+   */
+  cancelCalibration(): void {
+    if (this.isCalibrating) {
+      this.isCalibrating = false
+      this.calibrationStep = 0
+      this.setStatus(DeviceStatus.CONNECTED)
+      this.emit('calibrationCancelled', undefined)
     }
   }
 
