@@ -367,6 +367,8 @@ export class EyeTracker extends EventEmitter<EventMap> {
 
         // Step 2 & 3: Wait 3 seconds then send calibration command
         // This is handled in sendNextCalibrationPoint
+        // Note: We don't await here because handleMessage can't be async
+        // The method internally handles the delay with setTimeout
         this.sendNextCalibrationPoint(jsonIris.nFinishedNum)
 
         if (jsonIris.nFinishedNum === 5) {
@@ -512,19 +514,21 @@ export class EyeTracker extends EventEmitter<EventMap> {
    * 2. Wait for user to look at it (3 seconds)
    * 3. Then send the calibration command
    */
-  private async sendNextCalibrationPoint(finishedNum: number): Promise<void> {
+  private sendNextCalibrationPoint(finishedNum: number): void {
     // finishedNum is 1-based: 1 means first point finished, now handle second point
     // The calibrationProgress event has already been emitted in handleMessage
     // which causes the UI to show the next point immediately
 
     if (finishedNum >= 1 && finishedNum <= 4) {
       // Wait 3 seconds for user to look at the new point
-      await this.delay(3000)
-
-      // Then send the calibration command for the current point
-      // finishedNum=1 means we're now on point index 1 (second point)
-      const point = this.calibrationPoints[finishedNum]
-      this.sendCommand(createCalibrationCommand(point.x, point.y))
+      // Using setTimeout instead of async/await because this is called from handleMessage
+      // which is a WebSocket event handler that can't be async
+      setTimeout(() => {
+        // Then send the calibration command for the current point
+        // finishedNum=1 means we're now on point index 1 (second point)
+        const point = this.calibrationPoints[finishedNum]
+        this.sendCommand(createCalibrationCommand(point.x, point.y))
+      }, 3000)
     }
     // When finishedNum=5, calibration is complete
     // checkCalibration command is sent in handleMessage
